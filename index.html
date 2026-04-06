@@ -140,8 +140,7 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
 .tag-g{background:var(--green-lt);color:#0d6b50}
 .tag-b{background:var(--blue-lt);color:var(--blue)}
 .tag-a{background:var(--amber-lt);color:var(--amber)}
-.flag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid;margin:2px}
-.f-dv{background:#fdf4ff;color:#6b21a8;border-color:#e9d5ff}
+.flag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid;margin:2px}.f-dv{background:#fdf4ff;color:#6b21a8;border-color:#e9d5ff}
 .f-urg{background:var(--red-lt);color:var(--red-dk);border-color:#fecaca}
 .f-med{background:var(--blue-lt);color:var(--blue);border-color:#bfdbfe}
 .f-child{background:var(--amber-lt);color:var(--amber);border-color:#fde68a}
@@ -376,18 +375,20 @@ const SYS_EXTRACT = `You are a data extraction assistant for NZF Australia. Extr
 
 CRITICAL: Return ONLY a raw valid JSON object. No markdown, no backticks, no explanation. Start with { and end with }.
 
-{"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":null,"bank_alerts":[]},"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null}}
+{"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":"Plain English description e.g. 'Consistently overdrawn, average approx -$1,200 per month' or 'Average credit balance approx $340'","bank_alerts":[]},"contradictions":[],"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null}}
 
 Rules:
 - case_types: from ["Financial hardship - food, bills, medical","Housing - rent, bond, arrears","Funeral debt","Education - courses, Quran school fees","Other"]
 - priority: "Priority 1 - SAME DAY" / "Priority 2 - (1-3 days)" / "Priority 3 - (4-6 days)" / "Priority 4 - (7-10 days)"
 - zakat_category: "Al-Fuqara (The poor)" / "Al-Masakeen (The needy)" / "Al-Gharimeen (Those in debt)" / "Ibn Al-Sabil (Stranded traveller)"
-- flags: from ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT"]
+- flags: from ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT","CONTRADICTION DETECTED"]
 - priority_level: "High" / "Medium" / "Low"
 - case_name: "Zakat Application for [Full Name]"
+- bank_average_balance: MUST be a plain English string describing the balance situation, never a raw number. E.g. "Consistently overdrawn, average approx -$2,100 across 3 months" or "Average credit balance of approx $420"
 - If document analysis is present in history, populate the documents object accordingly
 - monthly_deficit: positive number if monthly income is less than rent + expenses
-- recommendation_text must never guarantee or promise support — phrase as an assessment recommendation only`;
+- recommendation_text must never guarantee or promise support — phrase as an assessment recommendation only
+- contradictions: Compare what the applicant stated in conversation against what documents revealed. Each item: {"field":"e.g. Name / Income / Centrelink","client_stated":"what they said","document_shows":"what document reveals","severity":"High/Medium/Low","caseworker_note":"brief plain-English note for caseworker"}. Include contradictions for: name mismatches, income discrepancies, stated vs actual benefit types, claimed employment vs Centrelink-only income, stated they are new client but document suggests prior engagement. Leave as empty array [] if no contradictions found.`;
 
 let history=[], userMsgCount=0, isLoading=false, capturedInfo={}, uploadedDocCount=0;
 
@@ -528,7 +529,14 @@ async function handleFileUpload(input) {
       { role:'assistant', content: analysis }
     );
 
-    addMsg('agent', analysis);
+    // Show the CLIENT only a warm reassurance — NEVER the analysis itself.
+    // The analysis is stored silently in history for caseworkers via the CRM preview only.
+    const confirms = [
+      "Thank you — your document has been received securely. Our casework team will review it as part of your application. You don't need to do anything else with it right now.",
+      "Got it, thank you. Your document has been securely received and will be reviewed by our caseworkers when they assess your application.",
+      "Thank you for sharing that. Your document has come through safely and will form part of the caseworker review.",
+    ];
+    addMsg('agent', confirms[uploadedDocCount % confirms.length]);
 
     // Update sidebar
     const strip=document.getElementById('docStrip');
@@ -538,7 +546,7 @@ async function handleFileUpload(input) {
     renderInfo();
   } catch(e) {
     removeTyping();
-    addMsg('agent', 'I\'m sorry, I had trouble reading that document. You can try again, or our caseworkers can collect it during their follow-up with you.');
+    addMsg('agent', 'I\'m sorry, I had a little trouble receiving that document. Could you try uploading it again? If it continues not to work, our caseworkers will be able to collect it from you during their follow-up.');
   }
   isLoading=false; document.getElementById('sbtn').disabled=false;
 }
@@ -634,9 +642,29 @@ async function submitApp() {
     let data;
     try { const clean=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim(); data=JSON.parse(clean); }
     catch(pe) { const m=raw.match(/\{[\s\S]*\}/); if(m) data=JSON.parse(m[0]); else throw new Error('JSON parse failed'); }
+
+    // CRM duplicate check — runs in parallel, never blocks the preview
+    document.getElementById('oMsg').textContent='Checking for prior applications...';
+    let crmResults = null;
+    try {
+      const crmRes = await fetch('/.netlify/functions/crm-search', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          first_name: data.contact?.first_name || null,
+          last_name:  data.contact?.last_name  || null,
+          email:      data.contact?.email      || null,
+          mobile:     data.contact?.mobile     || null
+        })
+      });
+      if (crmRes.ok) crmResults = await crmRes.json();
+    } catch(crmErr) {
+      console.log('CRM check unavailable:', crmErr.message);
+    }
+
     document.getElementById('oMsg').textContent='Building CRM preview...';
-    await new Promise(r=>setTimeout(r,500));
-    renderPreview(data); ol.classList.remove('show'); show('s-preview');
+    await new Promise(r=>setTimeout(r,400));
+    renderPreview(data, crmResults); ol.classList.remove('show'); show('s-preview');
   } catch(e) {
     ol.classList.remove('show'); console.error(e);
     const n=capturedInfo['Name']||null;
@@ -645,15 +673,117 @@ async function submitApp() {
       case:{case_name:n?'Zakat Application for '+n:'Zakat Application',case_types:[],description:'Intake completed via AI agent.',priority:'Priority 3 - (4-6 days)',is_returning_client:false,amount_requested:capturedInfo['Amount']?parseInt(capturedInfo['Amount'].replace(/[$,]/g,'')):null,urgency_reason:null},
       financial:{income_source:capturedInfo['Income']||null,monthly_income:null,monthly_rent:null,other_monthly_expenses:null,monthly_deficit:null,has_savings:null,savings_notes:null},
       documents:{id_verified:false,id_type:null,id_name_match:null,bank_statement_analysed:uploadedDocCount>0,bank_income_summary:null,bank_expense_summary:null,bank_average_balance:null,bank_alerts:[]},
+      contradictions:[],
       intake_note:{background:'Client completed AI intake.',immediate_need:capturedInfo['Needs']||'To be clarified',underlying_issue:'To be confirmed by caseworker.',financial_summary:'Full assessment required.',vulnerability_factors:[...(capturedInfo['DV']?['Domestic violence disclosed']:[]),(capturedInfo['Medical']?['Medical condition mentioned']:[])].flat(),documents_mentioned:uploadedDocCount>0?[uploadedDocCount+' document(s) uploaded']:[], documents_outstanding:['Government-issued ID','Bank statements (3 months)']},
       recommendation:{priority_level:capturedInfo['DV']?'High':'Medium',zakat_category:'Al-Masakeen (The needy)',flags:[...(capturedInfo['DV']?['DV']:[]),(capturedInfo['Medical']?['MEDICAL']:[]),(uploadedDocCount>0?['ID VERIFIED']:[''])].flat().filter(Boolean),eligibility_notes:'Full eligibility assessment required by caseworker per NZF framework.',recommendation_text:'Client completed AI intake. Caseworker follow-up recommended to complete eligibility assessment per NZF Zakat framework. No support is guaranteed at this stage.',suggested_amount:null,next_steps:'Assign caseworker. Verify documents. Complete eligibility assessment per NZF assessment framework.'}
-    });
+    }, null);
     show('s-preview');
   }
 }
 
+// ─── Contradictions Panel ───
+function buildContradictionsPanel(contradictions) {
+  if (!contradictions || contradictions.length === 0) return '';
+  const sevColor = s => s==='High'?'f-dv':s==='Medium'?'f-urg':'f-child';
+  const rows = contradictions.map(c => `
+    <div style="background:var(--cream);border:1px solid var(--border);border-left:3px solid var(--red);border-radius:8px;padding:11px 14px;margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span class="flag ${sevColor(c.severity)}" style="font-size:11px">${c.severity} severity</span>
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${c.field||'Unknown field'}</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:7px">
+        <div><div class="f-lbl" style="margin-bottom:3px">Client stated</div><div style="font-size:13px;color:var(--muted)">${c.client_stated||'—'}</div></div>
+        <div><div class="f-lbl" style="margin-bottom:3px">Document shows</div><div style="font-size:13px;color:var(--red-dk);font-weight:500">${c.document_shows||'—'}</div></div>
+      </div>
+      <div class="f-lbl" style="margin-bottom:3px">Caseworker note</div>
+      <div style="font-size:13px;color:var(--text)">${c.caseworker_note||'—'}</div>
+    </div>`).join('');
+  return `
+  <div class="p-row full"><div class="panel" style="border-color:#fecaca">
+    <div class="panel-hdr" style="background:#fff5f5">
+      <div class="p-icon pi-r"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V8h2v4z"/></svg></div>
+      <span class="panel-title">Contradictions Detected — Caseworker Only</span>
+      <span class="panel-mod" style="background:#fdf1f0;border-color:#fecaca;color:var(--red-dk)">${contradictions.length} found</span>
+    </div>
+    <div class="panel-body">
+      <div style="background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:12px;color:var(--red-dk);margin-bottom:14px">
+        &#9888; The following discrepancies were identified between what the applicant stated and what their documents show. These have <strong>not</strong> been disclosed to the applicant. Caseworker should verify sensitively during follow-up.
+      </div>
+      ${rows}
+    </div>
+  </div></div>`;
+}
+
+// ─── CRM Prior Applications Panel ───
+function buildCRMPanel(crmResults, contact) {
+  const name = [contact?.first_name, contact?.last_name].filter(Boolean).join(' ') || 'this applicant';
+
+  // CRM check not configured / unavailable
+  if (!crmResults || crmResults.configured === false) {
+    return `
+    <div class="p-row full"><div class="panel">
+      <div class="panel-hdr">
+        <div class="p-icon pi-a"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg></div>
+        <span class="panel-title">Prior Applications Check</span>
+        <span class="panel-mod">Zoho CRM</span>
+      </div>
+      <div class="panel-body">
+        <div style="background:var(--warm);border:1px solid var(--border);border-radius:8px;padding:11px 14px;font-size:13px;color:var(--muted)">
+          &#128274; Automatic CRM duplicate check requires Phase 2 setup (Zoho OAuth credentials as Netlify env vars). Until then, caseworker should manually search CRM for <strong>${name}</strong> before proceeding.
+        </div>
+      </div>
+    </div></div>`;
+  }
+
+  const contacts = crmResults.contacts || [];
+  const potentials = crmResults.potentials || [];
+  const hasPrior = potentials.length > 0;
+  const hasSimilarContact = contacts.length > 0;
+
+  if (!hasPrior && !hasSimilarContact) {
+    return `
+    <div class="p-row full"><div class="panel">
+      <div class="panel-hdr">
+        <div class="p-icon pi-g"><svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div>
+        <span class="panel-title">Prior Applications Check</span>
+        <span class="panel-mod">Zoho CRM — Last 6 months</span>
+      </div>
+      <div class="panel-body">
+        <div style="background:var(--green-lt);border:1px solid #a7f3d0;border-radius:8px;padding:11px 14px;font-size:13px;color:#0d6b50">
+          &#10003; No prior applications found for <strong>${name}</strong> in the last 6 months. This appears to be a new application.
+        </div>
+      </div>
+    </div></div>`;
+  }
+
+  const potRows = potentials.map(p => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span class="tag tag-b" style="flex-shrink:0">${p.CASE_ID||'—'}</span>
+      <span style="flex:1;color:var(--text)">${p.Deal_Name||'Unnamed case'}</span>
+      <span style="color:var(--muted)">${p.Stage||'—'}</span>
+      <span style="color:var(--muted);font-size:12px">${p.Created_Time?new Date(p.Created_Time).toLocaleDateString('en-AU'):''}</span>
+    </div>`).join('');
+
+  return `
+  <div class="p-row full"><div class="panel" style="border-color:#fde68a">
+    <div class="panel-hdr" style="background:var(--amber-lt)">
+      <div class="p-icon pi-a"><svg viewBox="0 0 24 24"><path d="M12 2L1 21h22L12 2zm1 14h-2v-2h2v2zm0-4h-2V8h2v4z"/></svg></div>
+      <span class="panel-title">Prior Applications Found — Possible Duplicate</span>
+      <span class="panel-mod" style="background:#fff;border-color:#fde68a;color:var(--amber)">${potentials.length} case${potentials.length!==1?'s':''} in last 6 months</span>
+    </div>
+    <div class="panel-body">
+      <div style="background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:9px 13px;font-size:12px;color:var(--amber);margin-bottom:14px">
+        &#9888; CRM records suggest <strong>${name}</strong> may have applied previously. The applicant ${potentials.length>0?'did not disclose this during intake or stated they were a new client':'has a matching contact record'}. Caseworker should verify before creating a new Contact record.
+      </div>
+      ${contacts.length>0?`<div class="note-lbl" style="margin-bottom:6px">Matching Contact Record${contacts.length>1?'s':''} in CRM</div>
+      ${contacts.slice(0,3).map(c=>`<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--border);color:var(--text)">${c.Full_Name||[c.First_Name,c.Last_Name].filter(Boolean).join(' ')||'—'} &nbsp;<span style="color:var(--muted)">${c.Email||''} ${c.Mobile||''}</span></div>`).join('')}<div style="margin-bottom:12px"></div>`:''}
+      ${potRows?`<div class="note-lbl" style="margin-bottom:6px">Prior Cases (last 6 months)</div>${potRows}`:''}
+    </div>
+  </div></div>`;
+}
+
 // ─── Render CRM Preview ───
-function renderPreview(d) {
+function renderPreview(d, crmResults) {
   const c=d.contact||{}, cs=d.case||{}, fi=d.financial||{}, n=d.intake_note||{}, r=d.recommendation||{}, docs=d.documents||{};
   const F=(v,fb)=>(v!=null&&v!==''&&v!==false)?v:(fb||'<span class="f-val nil">Not captured</span>');
   const FM=v=>v!=null?'$'+Number(v).toLocaleString():'<span class="f-val nil">Not captured</span>';
@@ -686,7 +816,7 @@ function renderPreview(d) {
       <div>
         <div class="note-sec"><div class="note-lbl">Income (from statements)</div><div class="note-txt">${F(docs.bank_income_summary)}</div></div>
         <div class="note-sec"><div class="note-lbl">Expenses (from statements)</div><div class="note-txt">${F(docs.bank_expense_summary)}</div></div>
-        <div class="note-sec"><div class="note-lbl">Average Balance</div><div class="note-txt">${docs.bank_average_balance!=null?'$'+Number(docs.bank_average_balance).toLocaleString():F(null)}</div></div>
+        <div class="note-sec"><div class="note-lbl">Average Balance</div><div class="note-txt">${F(docs.bank_average_balance)}</div></div>
         <div class="note-sec"><div class="note-lbl">Behavioural Alerts</div><div class="note-txt" style="margin-top:4px">${alertsH}</div></div>
       </div>
     </div>
@@ -735,6 +865,8 @@ function renderPreview(d) {
     </div></div>
   </div>
   ${docPanelHTML}
+  ${buildContradictionsPanel(d.contradictions||[])}
+  ${buildCRMPanel(crmResults, d.contact)}
   <div class="p-row full"><div class="panel"><div class="panel-hdr"><div class="p-icon pi-g"><svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div><span class="panel-title">Intake Note</span><span class="panel-mod">Notes on Case record</span></div><div class="panel-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div>
