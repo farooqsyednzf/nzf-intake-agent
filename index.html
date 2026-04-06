@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>NZF Australia — Zakat Assistance Intake</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -16,7 +16,7 @@
   --amber:#92600a;--amber-lt:#FFFBEB;
   --ff-d:"DM Serif Display",Georgia,serif;--ff-b:"DM Sans",system-ui,sans-serif;
 }
-html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(--cream)}
+html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(--cream);-webkit-text-size-adjust:100%}
 .screen{display:none;min-height:100vh;flex-direction:column}
 .screen.active{display:flex}
 .hdr{background:#fff;border-bottom:1px solid var(--border);padding:0 2rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:50;flex-shrink:0}
@@ -165,19 +165,136 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
 .btn{padding:10px 18px;border-radius:9px;font-size:13px;font-weight:500;font-family:var(--ff-b);cursor:pointer;transition:all .15s;border:none;display:inline-flex;align-items:center;gap:6px}
 .btn-ghost{background:var(--cream);color:var(--text);border:1px solid var(--border)}.btn-ghost:hover{background:var(--warm)}
 .btn-dis{background:#e8e3dc;color:var(--muted);cursor:not-allowed;border:1px solid var(--border)}
-@media(max-width:700px){
-  .chat-main,.p-row{grid-template-columns:1fr}
-  .sidebar{order:-1}
-  .hero,.hdr{padding-left:1rem;padding-right:1rem}
-  .prev-main,.chat-main{padding:1rem}
-  .fgrid{grid-template-columns:1fr}
-  .f:nth-child(odd):not(.span2){border-right:none;padding-right:0}
-  .f:nth-child(even):not(.span2){padding-left:0}
-  .fin-grid{grid-template-columns:1fr 1fr}
-  .prev-hero{padding:1.5rem 1rem 1rem}
+/* ─── MOBILE RESPONSIVE ─────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Chat screen fills exact viewport — prevents page scroll, works with iOS keyboard */
+  #s-chat {
+    height: 100dvh;
+    max-height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* Header — compact */
+  .hdr { padding: 0 1rem; height: 52px; }
+  .logo-org { font-size: 13px; }
+  .logo-ctry { display: none; }
+  .badge { font-size: 10px; padding: 3px 8px; }
+
+  /* Hero — compact, drop subtitle */
+  .hero { padding: 0.875rem 1rem; flex-shrink: 0; }
+  .hero-eye { font-size: 10px; margin-bottom: 5px; }
+  .hero-h1 { font-size: 19px; margin-bottom: 6px; }
+  .hero-p { display: none; }
+  .hero-pill { font-size: 11px; padding: 4px 10px; }
+
+  /* Chat layout: full-width flex column */
+  .chat-main {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    padding: 0;
+    gap: 0;
+    max-width: 100%;
+    margin: 0;
+    align-items: stretch;
+  }
+
+  /* Chat box stretches to fill */
+  .chat-box {
+    flex: 1;
+    min-height: 0;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  /* Messages: grow to fill, remove fixed max-height */
+  .msgs {
+    flex: 1;
+    min-height: 0;
+    max-height: none;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .bbl { max-width: 88%; font-size: 13px; }
+  .m-av { width: 24px; height: 24px; }
+
+  /* Quick replies: scroll horizontally instead of wrapping */
+  .qr {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    gap: 6px;
+  }
+  .qr::-webkit-scrollbar { display: none; }
+  .qbtn { flex-shrink: 0; font-size: 12px; white-space: nowrap; }
+
+  /* Input area — compact */
+  .inp-area { padding: 10px 12px; flex-shrink: 0; }
+  .tinput { font-size: 15px; padding: 9px 12px; }
+  .upload-btn, .sbtn { width: 40px; height: 40px; }
+
+  /* Submit area */
+  .sub-area { flex-shrink: 0; padding: 10px 12px; }
+  .sub-btn { font-size: 14px; padding: 12px; }
+  .sub-hint { font-size: 11px; }
+
+  /* Hide sidebar entirely on mobile */
+  .sidebar { display: none; }
+
+  /* Footer compact */
+  .ftr { padding: 0.75rem 1rem; font-size: 10px; }
+
+  /* === PREVIEW SCREEN === */
+  .prev-hero { padding: 1rem; }
+  .prev-hero-inner { flex-direction: column; gap: 10px; }
+  .prev-h1 { font-size: 18px; }
+  .prev-p { display: none; }
+  .back-btn { font-size: 12px; padding: 7px 12px; align-self: flex-start; }
+
+  .prev-main { padding: 0.875rem; gap: 12px; }
+  .p-row { grid-template-columns: 1fr; gap: 12px; }
+  .p-row.full { grid-template-columns: 1fr; }
+
+  .fgrid { grid-template-columns: 1fr; }
+  .f:nth-child(odd):not(.span2) { border-right: none; padding-right: 0; }
+  .f:nth-child(even):not(.span2) { padding-left: 0; }
+  .fin-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .fin-val { font-size: 15px; }
+
+  .act-bar { flex-direction: column; align-items: stretch; gap: 8px; }
+  .act-bar p { min-width: unset; }
+  .act-bar .btn { width: 100%; justify-content: center; }
+
+  .panel-hdr { padding: 10px 14px; }
+  .panel-body { padding: 12px 14px; }
+  .panel-title { font-size: 13px; }
+  .rec-hdr { padding: 12px 14px; gap: 10px; }
+  .rec-icon { font-size: 26px; }
 }
+
+/* Very small phones */
+@media (max-width: 390px) {
+  .hero-h1 { font-size: 17px; }
+  .hero-pill { font-size: 10px; padding: 3px 8px; }
+  .fin-grid { grid-template-columns: 1fr; }
+  .badge { display: none; }
+}
+
 .sub-btn:hover{background:var(--red-dk)}
 .sub-hint{font-size:12px;color:var(--red-dk);text-align:center;margin-top:7px;line-height:1.55}
+/* iOS safe area — notch and home bar */
+@supports (padding: max(0px)) {
+  .hdr { padding-left: max(1rem, env(safe-area-inset-left)); padding-right: max(1rem, env(safe-area-inset-right)); }
+  .sub-area, .inp-area { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+  .ftr { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
+}
 </style>
 </head>
 <body>
