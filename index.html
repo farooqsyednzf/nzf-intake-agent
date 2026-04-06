@@ -328,8 +328,9 @@ HOW TO HANDLE PRIORITY 1:
 3. For domestic violence: also say "1800RESPECT is free and available 24/7 - call or text 1800 737 732"
 4. Collect ONLY: name and a phone number so a Zakat Officer can reach them
 5. Say: "An NZF Zakat Officer will contact you within 24 hours as an absolute priority"
-6. Ask them to press Submit immediately - they do not need to answer more questions
-7. Do NOT ask about Centrelink, income, bank statements, rental history, or any standard intake questions
+6. IMPORTANT - If they have no shelter tonight or need help right now: tell them that 24 hours may be too long to wait, and invite them to call NZF directly on 1300 663 729 after submitting. Tell them to let the team know they have just submitted an application so the Zakat Officer can pull up their case immediately. Say something like: "Please submit your application first, then call us straight away on 1300 663 729 and let the team know you've just submitted - they'll be able to see your details right away and help you from there."
+7. Ask them to press Submit immediately - they do not need to answer more questions
+8. Do NOT ask about Centrelink, income, bank statements, rental history, or any standard intake questions
 
 PRIORITY 2 - HIGH RISK - 2-7 DAY TURNAROUND
 High risk of harm within days:
@@ -516,6 +517,17 @@ async function send() {
     removeTyping();
     history.push({ role:'assistant', content:reply });
     addMsg('agent', reply);
+
+    // Second-line emergency detection: if the agent itself uses 24hr/urgent/emergency language,
+    // trigger the P1 bypass even if the user's exact phrasing didn't match keywords.
+    if (!isEmergency) {
+      const ra = reply.toLowerCase();
+      if ((ra.includes('24 hour') || ra.includes('24-hour') || ra.includes('within 24')) &&
+          (ra.includes('urgent') || ra.includes('priority') || ra.includes('emergency') || ra.includes('immediately'))) {
+        triggerP1Emergency();
+      }
+    }
+
     if (isEmergency) {
       document.getElementById('subArea').style.background='#fff5f5';
       document.getElementById('subArea').style.borderTop='2px dashed var(--red)';
@@ -625,6 +637,25 @@ function updateStep(n) {
     el.querySelector('.sn').textContent=i<n?'\u2713':i;
   }
 }
+function triggerP1Emergency() {
+  if (isEmergency) return; // already triggered
+  isEmergency = true;
+  capturedInfo['\uD83D\uDEA8 PRIORITY 1'] = 'Critical Risk - 24hr';
+  // Bypass: P1 only needs name + mobile to submit
+  ['dob','situation','email','address','need'].forEach(k => { MIN[k].ok = true; });
+  document.getElementById('subArea').style.background = '#fff5f5';
+  document.getElementById('subArea').style.borderTop = '2px dashed var(--red)';
+  const hint = document.getElementById('subHint');
+  if (hint) hint.textContent = 'Please submit now. A Zakat Officer will contact you within 24 hours as an urgent priority.';
+  const btn2 = document.querySelector('.sub-btn');
+  if (btn2) btn2.innerHTML = '\uD83D\uDEA8 Submit Emergency Application - 24hr Priority';
+  const banner = document.getElementById('emergencyBanner');
+  if (banner) banner.style.display = 'block';
+  updateStep(6);
+  renderInfo();
+  checkRequirements();
+}
+
 // ---- Requirements Gate ----
 function checkRequirements() {
   const remaining = Object.values(MIN).filter(f => !f.ok);
@@ -653,10 +684,10 @@ function captureInfo(text) {
   // Situation captured after 2 exchanges
   if (userMsgCount >= 2) MIN.situation.ok = true;
 
-  // Mobile
+  // Mobile — flexible: 04xx (7-8 trailing digits), international, landline, or verbal offer
   const stripped = text.replace(/[\s\-().]/g, '');
-  if (/(?:04\d{8}|614\d{8}|0[23578]\d{8})/.test(stripped) ||
-      /(?:my (?:phone|mobile|number)|you can (?:call|reach|contact) me)/i.test(t)) {
+  if (/04\d{7,8}/.test(stripped) || /\+614\d{7,8}/.test(stripped) || /0[23578]\d{7,8}/.test(stripped) ||
+      /(?:my (?:phone|mobile|number|contact)|you can (?:call|reach|contact) me|reach me (?:on|at))/i.test(t)) {
     MIN.mobile.ok = true; capturedInfo['Mobile'] = 'Provided';
   }
 
@@ -701,28 +732,22 @@ function captureInfo(text) {
   const $m=text.match(/\$\s*([\d,]+)/); if($m) capturedInfo['Amount']='$'+$m[1];
 
   // NZF Priority 1 - life-threatening - bypass requirements except name + mobile
-  const p1=['homeless','no place to sleep','nowhere to sleep','sleeping in car','living in car','sleeping rough','on the street','no shelter',
+  const p1=['homeless','no place to sleep','nowhere to sleep','sleeping in car','living in car',
+    'sleeping in my car','only have my car','my car for tonight','car for tonight','have my car tonight',
+    'in my car tonight','sleeping rough','on the street','no shelter','no home','no house','lost my home',
+    'nowhere to go','nowhere to sleep tonight','no place tonight','no fixed address',
     'fleeing','running from','not safe','unsafe','in danger','being threatened','hit me','hitting me',
     'no food','nothing to eat','children are hungry','kids are hungry','baby is hungry','havent eaten',"haven't eaten",'cant feed',"can't feed",
     'funeral','burial','emergency medication','fearing for my life','immediate danger'];
+  // Also catch combo: "car" + sleeping/tonight context
+  const p1combo = t.includes('car') && (t.includes('tonight') || t.includes('sleep') || t.includes('nowhere'));
   const p2=['eviction','evict','bailiff','locks changed','kicked out','thrown out',
     'electricity','gas','utility','disconnection','being cut off','shut off',
     'baby formula','no heating','heating urgently','hygiene','basic necessities','within days'];
 
   if (!isEmergency) {
-    if (p1.some(kw=>t.includes(kw))) {
-      isEmergency=true;
-      capturedInfo['\uD83D\uDEA8 PRIORITY 1']='Critical Risk - 24hr';
-      ['dob','situation','email','address','need'].forEach(k=>{ MIN[k].ok=true; });
-      document.getElementById('subArea').style.background='#fff5f5';
-      document.getElementById('subArea').style.borderTop='2px dashed var(--red)';
-      const hint=document.getElementById('subHint');
-      if(hint) hint.textContent='Please submit now. A Zakat Officer will contact you within 24 hours as an urgent priority.';
-      const btn2=document.querySelector('.sub-btn');
-      if(btn2) btn2.innerHTML='\uD83D\uDEA8 Submit Emergency Application - 24hr Priority';
-      const banner=document.getElementById('emergencyBanner');
-      if(banner) banner.style.display='block';
-      updateStep(6);
+    if (p1.some(kw=>t.includes(kw)) || p1combo) {
+      triggerP1Emergency();
     } else if (!capturedInfo['\u26A0 P2']&&p2.some(kw=>t.includes(kw))) {
       capturedInfo['\u26A0 P2']='High Risk - 2-7 days';
       ['dob','email'].forEach(k=>{ MIN[k].ok=true; });
