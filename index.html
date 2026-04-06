@@ -512,9 +512,17 @@ window.onload = () => {
 function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
 function goBack() { show('s-chat'); }
 
-// ---- API 
-async function claude(messages, system, maxTokens) {
+// ---- API - with automatic retry on rate limit ----
+async function claude(messages, system, maxTokens, attempt=0) {
   const r = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model:MODEL, max_tokens:maxTokens, system, messages }) });
+  if (r.status === 429 && attempt < 4) {
+    const wait = (attempt + 1) * 8000; // 8s, 16s, 24s, 32s
+    const errBar = document.getElementById('errBar');
+    if (errBar) { errBar.textContent = 'Just a moment… retrying in ' + Math.round(wait/1000) + 's'; errBar.style.display='block'; }
+    await new Promise(res => setTimeout(res, wait));
+    if (errBar) errBar.style.display='none';
+    return claude(messages, system, maxTokens, attempt + 1);
+  }
   if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||'Server error '+r.status); }
   return (await r.json()).content[0].text;
 }
