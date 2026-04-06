@@ -110,6 +110,7 @@ exports.handler = async (event) => {
 async function zget(url, headers) {
   try {
     const res = await fetch(url, { headers });
+    if (res.status === 204) return { data: [] }; // Zoho returns 204 when no records found
     if (!res.ok) {
       console.error('Zoho API', res.status, url.split('?')[0]);
       return {};
