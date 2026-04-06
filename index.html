@@ -408,6 +408,39 @@ RULES (all priorities):
 - Write in plain natural sentences only, as a person would speak
 - Never use formal report-style language or structured formatting
 
+DATA TRACKING — CRITICAL, FOLLOW EXACTLY:
+At the very end of EVERY response you send, after your conversational message, append this exact JSON block on a new line. Accumulate values — once captured, keep them in every subsequent response. Use null for anything not yet known. This block is parsed by the system and never shown to the applicant.
+
+{"_d":{"name":null,"dob":null,"mobile":null,"email":null,"address":null,"need":null,"situation":false,"income_source":null,"monthly_income":null,"monthly_rent":null,"children":null,"children_ages":null,"household_size":null,"marital_status":null,"medical":null,"dv":false,"amount":null,"returning":false,"accommodation":null,"residency":null,"interpreter":false,"interpreter_lang":null}}
+
+Rules for each field:
+- name: Full name as stated (e.g. "Sarah Syed"). Keep once captured.
+- dob: Date of birth as stated (e.g. "15 March 1988"). Keep once captured.
+- mobile: Phone number as stated. Keep once captured.
+- email: Email address. Keep once captured.
+- address: Suburb, postcode, or street address (e.g. "Auburn 2144"). Keep once captured.
+- need: One of "Housing", "Funeral", "Education", "Financial hardship", "Medical", "Other". Keep once clear.
+- situation: true once applicant has described their situation in any meaningful way.
+- income_source: e.g. "Centrelink", "Employment", "Self-employed", "Pension", "No income". null until stated.
+- monthly_income: Numeric monthly income in AUD (e.g. 1632). Estimate from fortnightly/weekly if needed. null until stated.
+- monthly_rent: Numeric monthly rent in AUD. null until stated.
+- children: Number of children as an integer (e.g. 3). null until stated.
+- children_ages: Ages as stated (e.g. "2, 5, 8"). null until stated.
+- household_size: Total number of people in household including applicant. null until clear.
+- marital_status: e.g. "Single", "Married", "Divorced", "Widowed", "Separated". null until stated.
+- medical: Brief description of medical condition if mentioned. null if none mentioned.
+- dv: true if domestic violence is mentioned or implied, false otherwise.
+- amount: Dollar amount of assistance requested (numeric, e.g. 2500). null until stated.
+- returning: true if applicant mentions they have applied to NZF before.
+- accommodation: e.g. "Renting", "Staying with family", "Temporary accommodation", "Homeless". null until clear.
+- residency: e.g. "Australian citizen", "Permanent resident", "Temporary visa", "Refugee". null until stated.
+- interpreter: true if applicant appears to need an interpreter or states they do.
+- interpreter_lang: Language needed (e.g. "Arabic", "Somali"). null unless stated.
+
+Example of a valid response ending:
+...and our team will do their very best to support you.
+{"_d":{"name":"Fatimah Al-Hassan","dob":"15 March 1988","mobile":"0412345678","email":"fatimah@email.com","address":"Auburn 2144","need":"Housing","situation":true,"income_source":"Centrelink","monthly_income":1632,"monthly_rent":1800,"children":2,"children_ages":"3, 7","household_size":3,"marital_status":"Single","medical":null,"dv":false,"amount":2000,"returning":false,"accommodation":"Renting","residency":"Permanent resident","interpreter":false,"interpreter_lang":null}}
+
 Start every conversation with a warm greeting in English and Arabic, introduce yourself as Nour, and ask their name.`;
 
 // ---- System: Document Analysis 
@@ -565,8 +598,10 @@ async function send() {
   try {
     const reply = await claude(history, SYS_CHAT, 800);
     removeTyping();
-    history.push({ role:'assistant', content:reply });
-    addMsg('agent', reply);
+    // Store reply in history with _d block stripped — it's only for the frontend
+    const cleanReply = reply.replace(/\n?\{"_d":\{[\s\S]*?\}\}/, '').trim();
+    history.push({ role:'assistant', content:cleanReply });
+    addMsg('agent', reply); // addMsg parses _d block before display
 
     // Second-line emergency detection: if the agent itself uses 24hr/urgent/emergency language,
     // trigger the P1 bypass even if the user's exact phrasing didn't match keywords.
@@ -640,11 +675,55 @@ function showErr(msg) { const b=document.getElementById('errBar'); b.textContent
 // ---- Message UI 
 function addMsg(role, text) {
   const msgs=document.getElementById('msgs');
+
+  // If this is an agent message, silently parse and strip the _d data block
+  let displayText = text;
+  if (role === 'agent') {
+    const dataMatch = text.match(/\{"_d":\{[\s\S]*?\}\}/);
+    if (dataMatch) {
+      try {
+        const d = JSON.parse(dataMatch[0])._d;
+        // MIN gate — driven by model understanding, not regex
+        if (d.name)      { MIN.name.ok = true; }
+        if (d.dob)       { MIN.dob.ok = true; }
+        if (d.mobile)    { MIN.mobile.ok = true; }
+        if (d.email)     { MIN.email.ok = true; }
+        if (d.address)   { MIN.address.ok = true; }
+        if (d.need)      { MIN.need.ok = true; }
+        if (d.situation) { MIN.situation.ok = true; }
+        // Full sidebar — everything the model knows
+        if (d.name)           capturedInfo['Name']         = d.name;
+        if (d.dob)            capturedInfo['Date of birth'] = d.dob;
+        if (d.mobile)         capturedInfo['Mobile']        = d.mobile;
+        if (d.email)          capturedInfo['Email']         = d.email;
+        if (d.address)        capturedInfo['Address']       = d.address;
+        if (d.need)           capturedInfo['Needs']         = d.need;
+        if (d.income_source)  capturedInfo['Income']        = d.income_source;
+        if (d.monthly_income) capturedInfo['Monthly income'] = '$' + d.monthly_income;
+        if (d.monthly_rent)   capturedInfo['Monthly rent']  = '$' + d.monthly_rent;
+        if (d.children != null && d.children !== '') capturedInfo['Children'] = d.children + (d.children_ages ? ' (ages: ' + d.children_ages + ')' : '');
+        if (d.household_size) capturedInfo['Household']     = d.household_size + ' people';
+        if (d.marital_status) capturedInfo['Marital status'] = d.marital_status;
+        if (d.accommodation)  capturedInfo['Accommodation'] = d.accommodation;
+        if (d.residency)      capturedInfo['Residency']     = d.residency;
+        if (d.medical)        capturedInfo['Medical']       = d.medical;
+        if (d.dv)             capturedInfo['DV']            = '⚠ Flagged';
+        if (d.amount)         capturedInfo['Amount sought'] = '$' + d.amount;
+        if (d.returning)      capturedInfo['Returning']     = 'Yes';
+        if (d.interpreter)    capturedInfo['Interpreter']   = d.interpreter_lang || 'Yes';
+        renderInfo();
+        checkRequirements();
+      } catch(e) { /* ignore malformed block */ }
+      // Strip the data block from what the applicant sees
+      displayText = text.replace(/\n?\{"_d":\{[\s\S]*?\}\}/, '').trim();
+    }
+  }
+
   const div=document.createElement('div'); div.className='msg '+(role==='doc'?'user doc':role);
   const av=document.createElement('div'); av.className='m-av'+(role!=='agent'?' u':'');
   if (role==='agent') { const img=document.createElement('img'); img.src=LOGO; img.style.cssText='width:100%;height:100%;object-fit:cover;border-radius:50%'; av.appendChild(img); }
   else { av.textContent=role==='doc'?'\uD83D\uDCCE':'You'; av.style.fontSize=role==='doc'?'14px':'10px'; }
-  const bbl=document.createElement('div'); bbl.className='bbl'; bbl.innerHTML=text.replace(/\n/g,'<br>');
+  const bbl=document.createElement('div'); bbl.className='bbl'; bbl.innerHTML=displayText.replace(/\n/g,'<br>');
   div.appendChild(av); div.appendChild(bbl); msgs.appendChild(div); msgs.scrollTop=msgs.scrollHeight;
 }
 function showTyping() {
@@ -722,13 +801,13 @@ function captureInfo(text) {
 
   // Name — catch formal and natural patterns, but always verify captured text starts with a capital
   const STOPWORDS = new Set(['My','Hi','Hello','Yes','No','OK','I','It','The','We','He','She','They','Sorry','Thanks','Good','Fine','Not','Just','Also','And','But','So','Because']);
-  const nmFormal = text.match(/(?:my name(?:'s| is)|i(?:'m| am)|call me|it'?s)\s+([a-zA-Z\-']+(?:\s+[a-zA-Z\-']+)?)/i);
-  const nmSimple = text.trim().match(/^([a-zA-Z\-']{2,}(?:\s+[a-zA-Z\-']{2,})?)[\.\,!]?\s*$/); // whole message is a name (lowercase ok)
+  const nmFormal = text.match(/(?:my name(?:'s| is)|i(?:'m|m| am)|call me|it'?s)\s+([a-zA-Z\-']+(?:\s+[a-zA-Z\-']+){0,2})/i);
+  const nmSimple = text.trim().match(/^([a-zA-Z\-']{2,}(?:\s+[a-zA-Z\-']{2,}){0,2})[\.,!]?\s*$/); // whole message is a name
   // Capitalise each word of detected name; reject if starts with common verb/adjective after "I am..."
   const capName = s => s.replace(/\b\w/g, c => c.toUpperCase());
   const nmFormalRaw = nmFormal && nmFormal[1];
   // Reject "I am struggling..." — the word after "I am" must not be a known non-name verb
-  const NON_NAMES = new Set(['struggling','trying','looking','hoping','reaching','writing','calling','contacting','not','unable','having','going','living','working','applying']);
+  const NON_NAMES = new Set(['struggling','trying','looking','hoping','reaching','writing','calling','contacting','not','unable','having','going','living','working','applying','doing','feeling','just','currently','really','very','quite','already','still','here','sorry','okay','ok','great','glad','grateful','worried','stressed','afraid','scared','desperate','broke','homeless','unemployed','experiencing','facing','dealing','seeking','requesting','need','needing']);
   const nmFormalValid = nmFormalRaw && !NON_NAMES.has(nmFormalRaw.toLowerCase().split(' ')[0]) ? capName(nmFormalRaw) : null;
   // nmSimple: whole message is a name — must be 2-40 chars, not a stopword
   const nmSimpleVal = nmSimple && nmSimple[1] && nmSimple[1].length <= 40 ? capName(nmSimple[1]) : null;
