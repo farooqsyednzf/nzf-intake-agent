@@ -7,7 +7,6 @@
  * Set ANTHROPIC_API_KEY in Netlify: Site settings → Environment variables
  */
 exports.handler = async (event) => {
-  // Only accept POST
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
@@ -27,18 +26,32 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: JSON.stringify({ error: 'Invalid JSON body' }) };
   }
 
+  // Detect if any message contains a PDF document block — requires the beta header
+  const hasPDF = (body.messages || []).some(m =>
+    Array.isArray(m.content) && m.content.some(b => b.type === 'document' && b.source?.media_type === 'application/pdf')
+  );
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  };
+  if (hasPDF) {
+    headers['anthropic-beta'] = 'pdfs-2024-09-25';
+  }
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
+      headers,
       body: JSON.stringify(body)
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      console.error('Anthropic API error:', response.status, JSON.stringify(data));
+    }
 
     return {
       statusCode: response.status,
