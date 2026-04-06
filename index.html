@@ -394,9 +394,11 @@ There are 7 pieces of information we must collect before submission. Gather them
 
 6. HOUSEHOLD - who they live with, number and ages of children or dependants.
 
-7. VULNERABILITIES AND DOCUMENTS - medical conditions, DV situation (extreme care). Then invite document upload: "If you have a photo ID or bank statements handy, attaching them using the paperclip icon means our team can move much faster for you. Completely optional."
+7. VULNERABILITIES - medical conditions, DV situation (extreme care), disability.
 
-WRAP-UP - once all 7 are gathered: "I think I have everything I need. The Submit button below should now be available - feel free to add anything else before you send it through."
+8. DOCUMENTS - MANDATORY before wrap-up, for ALL Priority 3 and 4 cases. Always ask this, even if you think you have enough. Say something like: "Before I let you submit, can I just check - do you happen to have any documents you could attach? Even a photo of your ID and a recent bank statement would really help our Zakat Officers assess your application faster. Just tap the paperclip icon if you do. Completely optional, but it makes a big difference." Wait for their response before moving to wrap-up.
+
+WRAP-UP - only after stage 8: "I think I have everything I need. The Submit button below should now be available - feel free to add anything else before you send it through."
 
 RULES (all priorities):
 - DV: express deep care, assure confidentiality, never press for details
@@ -670,19 +672,25 @@ function checkRequirements() {
 function captureInfo(text) {
   const t = text.toLowerCase();
 
-  // Name — catch formal and natural patterns
-  // e.g. "my name is Sarah", "I'm Sarah Al-Hassan", "It's Sarah", just "Sarah", "Sarah" alone
-  const STOPWORDS = new Set(['My','Hi','Hello','Yes','No','OK','I','It','The','We','He','She','They','Yes','No','Sorry','Thanks','Good','Fine']);
-  const nmFormal = text.match(/(?:my name(?:'s| is)|i(?:'m| am)|call me|it'?s) ([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)/i);
-  const nmSimple = text.match(/^([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)[\.,!]?\s*$/); // Just a name by itself
-  const nmMatch = (nmFormal && nmFormal[1]) || (nmSimple && nmSimple[1]);
+  // Name — catch formal and natural patterns, but always verify captured text starts with a capital
+  const STOPWORDS = new Set(['My','Hi','Hello','Yes','No','OK','I','It','The','We','He','She','They','Sorry','Thanks','Good','Fine','Not','Just','Also','And','But','So','Because']);
+  const nmFormal = text.match(/(?:my name(?:'s| is)|i(?:'m| am)|call me|it'?s)\s+([a-zA-Z\-']+(?:\s+[a-zA-Z\-']+)?)/i);
+  const nmSimple = text.match(/^([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)[\.,!]?\s*$/); // whole message is just a name
+  // Only accept nmFormal if the captured word actually starts with a capital (rejects "I am struggling...")
+  const nmFormalValid = nmFormal && nmFormal[1] && /^[A-Z]/.test(nmFormal[1]) ? nmFormal[1] : null;
+  const nmMatch = nmFormalValid || (nmSimple && nmSimple[1]);
   if (nmMatch && !STOPWORDS.has(nmMatch.split(' ')[0])) {
     capturedInfo['Name'] = nmMatch; MIN.name.ok = true;
   }
 
-  // Date of birth
-  if (/\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}/.test(text) ||
-      /(?:born|dob|date of birth|birthday|i(?:'m| am) \d{1,2}\s*years?\s*old)/i.test(t)) {
+  // Date of birth — numeric separators, month names, age statements, DOB keywords
+  const MONTHS = 'jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec|january|february|march|april|june|july|august|september|october|november|december';
+  if (
+    /\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4}/.test(text) ||                                         // 01/01/1983 or 1-1-83
+    new RegExp('\\d{1,2}\\s*(?:st|nd|rd|th)?\\s+(?:of\\s+)?(?:'+MONTHS+')[,.]?\\s+\\d{2,4}','i').test(text) || // 1 Jan 1983, 1st January 1983
+    new RegExp('(?:'+MONTHS+')\\s+\\d{1,2}[,.]?\\s+\\d{2,4}','i').test(text) ||                    // January 1, 1983
+    /(?:born|dob|date of birth|birthday|i(?:'m| am) \d{1,2}\s*years?\s*old)/i.test(t)              // "I'm 41 years old", "born in..."
+  ) {
     MIN.dob.ok = true;
   }
 
