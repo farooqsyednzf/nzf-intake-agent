@@ -723,10 +723,16 @@ function captureInfo(text) {
   // Name — catch formal and natural patterns, but always verify captured text starts with a capital
   const STOPWORDS = new Set(['My','Hi','Hello','Yes','No','OK','I','It','The','We','He','She','They','Sorry','Thanks','Good','Fine','Not','Just','Also','And','But','So','Because']);
   const nmFormal = text.match(/(?:my name(?:'s| is)|i(?:'m| am)|call me|it'?s)\s+([a-zA-Z\-']+(?:\s+[a-zA-Z\-']+)?)/i);
-  const nmSimple = text.match(/^([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)[\.,!]?\s*$/); // whole message is just a name
-  // Only accept nmFormal if the captured word actually starts with a capital (rejects "I am struggling...")
-  const nmFormalValid = nmFormal && nmFormal[1] && /^[A-Z]/.test(nmFormal[1]) ? nmFormal[1] : null;
-  const nmMatch = nmFormalValid || (nmSimple && nmSimple[1]);
+  const nmSimple = text.trim().match(/^([a-zA-Z\-']{2,}(?:\s+[a-zA-Z\-']{2,})?)[\.\,!]?\s*$/); // whole message is a name (lowercase ok)
+  // Capitalise each word of detected name; reject if starts with common verb/adjective after "I am..."
+  const capName = s => s.replace(/\b\w/g, c => c.toUpperCase());
+  const nmFormalRaw = nmFormal && nmFormal[1];
+  // Reject "I am struggling..." — the word after "I am" must not be a known non-name verb
+  const NON_NAMES = new Set(['struggling','trying','looking','hoping','reaching','writing','calling','contacting','not','unable','having','going','living','working','applying']);
+  const nmFormalValid = nmFormalRaw && !NON_NAMES.has(nmFormalRaw.toLowerCase().split(' ')[0]) ? capName(nmFormalRaw) : null;
+  // nmSimple: whole message is a name — must be 2-40 chars, not a stopword
+  const nmSimpleVal = nmSimple && nmSimple[1] && nmSimple[1].length <= 40 ? capName(nmSimple[1]) : null;
+  const nmMatch = nmFormalValid || nmSimpleVal;
   if (nmMatch && !STOPWORDS.has(nmMatch.split(' ')[0])) {
     capturedInfo['Name'] = nmMatch; MIN.name.ok = true;
   }
@@ -820,7 +826,9 @@ function captureInfo(text) {
 
 function renderInfo() {
   const el=document.getElementById('infoPanel');
-  const entries=Object.entries(capturedInfo);
+  // Filter out internal triage fields — applicant should not see priority/P2 flags
+  const HIDDEN = ['\uD83D\uDEA8 PRIORITY 1','\u26A0 P2','\u26A0\uFE0F P2'];
+  const entries=Object.entries(capturedInfo).filter(([k])=>!HIDDEN.includes(k));
   if(!entries.length){el.innerHTML='<p class="i-empty">Will appear as we chat...</p>';return;}
   el.innerHTML='<div class="ilist">'+entries.map(([k,v])=>`<div class="iitem"><span class="il">${k}</span><span class="iv">${v}</span></div>`).join('')+'</div>';
 }
