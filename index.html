@@ -549,11 +549,7 @@ function goBack() { show('s-chat'); }
 async function claude(messages, system, maxTokens, attempt=0) {
   const r = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model:MODEL, max_tokens:maxTokens, system, messages }) });
   if (r.status === 429 && attempt < 4) {
-    const wait = (attempt + 1) * 8000; // 8s, 16s, 24s, 32s
-    const errBar = document.getElementById('errBar');
-    if (errBar) { errBar.textContent = 'Just a moment… retrying in ' + Math.round(wait/1000) + 's'; errBar.style.display='block'; }
-    await new Promise(res => setTimeout(res, wait));
-    if (errBar) errBar.style.display='none';
+    await new Promise(res => setTimeout(res, (attempt + 1) * 8000));
     return claude(messages, system, maxTokens, attempt + 1);
   }
   if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||'Server error '+r.status); }
@@ -567,7 +563,8 @@ async function initChat() {
   try {
     const reply = await claude([initMsg], SYS_CHAT, 600);
     removeTyping();
-    history.push(initMsg, { role:'assistant', content:reply });
+    const cleanReply = reply.replace(/\n?\{"_d":\{[\s\S]*?\}\}/, '').trim();
+    history.push(initMsg, { role:'assistant', content:cleanReply });
     addMsg('agent', reply);
     setQR(['I need help with rent','I need food assistance','I need help with bills','I need funeral assistance']);
   } catch(e) {
@@ -1009,7 +1006,9 @@ function renderPreview(d, crmResults) {
       const bg = isAgent ? 'var(--warm)' : '#fff';
       const align = isAgent ? 'left' : 'right';
       const border = isAgent ? 'border-left:3px solid var(--red)' : 'border-right:3px solid var(--border)';
-      const text = typeof m.content === 'string' ? m.content.replace(/\n/g,'<br>') : '[Document uploaded]';
+      const text = typeof m.content === 'string'
+        ? m.content.replace(/\n?\{"_d":\{[\s\S]*?\}\}/, '').trim().replace(/\n/g,'<br>')
+        : '[Document uploaded]';
       return `<div style="margin-bottom:12px;text-align:${align}">
         <div style="display:inline-block;max-width:85%;text-align:left;background:${bg};border:1px solid var(--border);${border};border-radius:8px;padding:9px 13px">
           <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">${label}</div>
