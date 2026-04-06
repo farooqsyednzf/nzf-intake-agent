@@ -411,27 +411,64 @@ RULES (all priorities):
 Start every conversation with a warm greeting in English and Arabic, introduce yourself as Nour, and ask their name.`;
 
 // ---- System: Document Analysis 
-const SYS_DOC = `You are a document analysis assistant for NZF Australia. A Zakat assistance applicant has uploaded a document during their intake. Analyse it and provide a structured summary for NZF Zakat Officers only.
-
-WHAT TO DO:
-1. Identify the document type (passport, driver licence, bank statement, Centrelink letter, payslip, utility bill, etc.)
-2. For IDENTITY DOCUMENTS: extract full name, DOB, address, expiry. Note any discrepancy with what the applicant stated.
-3. For BANK STATEMENTS: institution, account type; income sources/amounts/frequency; key expense categories and monthly totals; average closing balance; FLAG any alerts (gambling transactions, large unexplained withdrawals, income mismatch with stated income, patterns suggesting undisclosed income).
-4. For PAYSLIPS or CENTRELINK LETTERS: employer or payment type, gross and net amount, frequency.
-5. For OTHER documents: describe what it shows and its relevance.
+const SYS_DOC = `You are a document analysis assistant for NZF Australia. A Zakat assistance applicant has uploaded a document. Analyse it carefully and output using the EXACT format below so a downstream system can extract the data reliably.
 
 PRIVACY RULES: Never reproduce full account numbers, BSB numbers, or TFNs. Truncate to last 4 digits only.
 
-OUTPUT: Start with "Document Analysis:" then document type, then findings. Under 250 words. Factual and professional.`;
+OUTPUT FORMAT — use these exact labels, one per line:
+
+For IDENTITY DOCUMENTS (passport, driver licence, Medicare card, etc):
+DOCUMENT TYPE: [exact document type]
+ID NAME: [full name as printed]
+ID DOB: [date of birth as printed]
+ID ADDRESS: [address if shown, or "Not shown"]
+ID EXPIRY: [expiry date or "Not shown"]
+ID VERIFIED: [Yes / No / Partial]
+ID NOTES: [any discrepancy with applicant-stated details, or "None"]
+
+For BANK STATEMENTS:
+DOCUMENT TYPE: Bank Statement
+BANK NAME: [institution name]
+ACCOUNT TYPE: [transaction / savings / etc]
+STATEMENT PERIOD: [date range]
+INCOME SUMMARY: [income sources, amounts, frequency — e.g. "Centrelink JobSeeker $816.45 fortnightly = approx $1,770/month"]
+EXPENSE SUMMARY: [main spending categories and approximate monthly totals — e.g. "Rent $1,800/month, groceries $400/month, transport $120/month"]
+AVERAGE BALANCE: [plain English — e.g. "Consistently overdrawn, average approx -$1,200 across the period" or "Average credit balance approx $340"]
+ALERTS: [comma-separated list of concerns — gambling transactions, large unexplained withdrawals, income higher than stated, etc. Write "None identified" if none]
+
+For PAYSLIPS or CENTRELINK LETTERS:
+DOCUMENT TYPE: [Payslip / Centrelink Income Statement / etc]
+EMPLOYER OR PAYMENT TYPE: [name]
+GROSS AMOUNT: [amount and frequency]
+NET AMOUNT: [amount and frequency]
+INCOME SUMMARY: [plain English summary]
+
+For OTHER documents:
+DOCUMENT TYPE: [describe]
+SUMMARY: [what it shows and its relevance to the Zakat application]
+
+Always use the exact label names above. Do not add preamble or explanation — output only the labelled fields.`;
 
 // ---- System: JSON Extraction 
-const SYS_EXTRACT = `You are a data extraction assistant for NZF Australia. Extract all information from the intake conversation into a structured JSON object. Document analysis summaries in history should populate the documents object.
+const SYS_EXTRACT = `You are a data extraction assistant for NZF Australia. Extract all information from the intake conversation into a structured JSON object.
+
+Document analyses in the conversation history use labelled fields (INCOME SUMMARY:, EXPENSE SUMMARY:, AVERAGE BALANCE:, ALERTS:, ID VERIFIED:, etc). Read these labels directly and map them to the documents object fields — do not summarise or paraphrase, use the values as written.
 
 CRITICAL: Return ONLY a raw valid JSON object. No markdown, no backticks, no explanation. Start with { and end with }.
 
 {"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":null,"bank_alerts":[]},"contradictions":[],"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null}}
 
-Rules:
+Document field mapping (read directly from labelled analysis text in history):
+- id_type: from DOCUMENT TYPE label (when an identity document)
+- id_verified: true if ID VERIFIED label says "Yes", false otherwise
+- id_name_match: compare ID NAME label with name the applicant gave in conversation — note any mismatch
+- bank_statement_analysed: true if any DOCUMENT TYPE: Bank Statement appears in history
+- bank_income_summary: copy value from INCOME SUMMARY label exactly
+- bank_expense_summary: copy value from EXPENSE SUMMARY label exactly
+- bank_average_balance: copy value from AVERAGE BALANCE label exactly
+- bank_alerts: split ALERTS label value into array items (empty array if "None identified")
+
+Other rules:
 - case_types from: ["Financial hardship - food, bills, medical","Housing - rent, bond, arrears","Funeral debt","Education - courses, Quran school fees","Other"]
 - priority (EXACT NZF strings): "Priority 1 - CRITICAL RISK (24-hour turnaround)" or "Priority 2 - HIGH RISK (2-7 day turnaround)" or "Priority 3 - MODERATE RISK (2-week turnaround)" or "Priority 4 - LOW RISK (1-month turnaround)"
 - P1 triggers: urgent food now, rough sleeping tonight, emergency medication, funeral costs, immediate safety threat
@@ -441,11 +478,14 @@ Rules:
 - zakat_category: "Al-Fuqara (The poor)" or "Al-Masakeen (The needy)" or "Al-Gharimeen (Those in debt)" or "Ibn Al-Sabil (Stranded traveller)"
 - flags from: ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT","CONTRADICTION DETECTED","EMERGENCY - PRIORITY 1"]
 - priority_level: "High" for P1/P2, "Medium" for P3, "Low" for P4
+- first_name / last_name: split the applicant's full name — first word is first_name, remainder is last_name
+- number_of_children: extract the actual count (e.g. 3, 4) not just "Yes"
+- children_ages: list ages as mentioned (e.g. "2, 5, 8, 12")
 - case_name: "Zakat Application for [Full Name]"
-- bank_average_balance: plain English string (e.g. "Consistently overdrawn, average approx -$2,100 across 3 months") never a raw number
+- bank_average_balance: plain English string, never a raw number
 - monthly_deficit: positive number if income less than expenses
 - recommendation_text: must never guarantee or promise support
-- contradictions: each item {"field":"..","client_stated":"..","document_shows":"..","severity":"High/Medium/Low","zakat_officer_note":".."}. Empty array if none.`;
+- contradictions: compare ID NAME / INCOME SUMMARY from documents against what applicant stated. Each item: {"field":"..","client_stated":"..","document_shows":"..","severity":"High/Medium/Low","caseworker_note":".."}. Empty array if no contradictions.`;
 
 // ---- State ----
 let history=[], userMsgCount=0, isLoading=false, capturedInfo={}, uploadedDocCount=0, isEmergency=false;
@@ -783,7 +823,7 @@ async function submitApp() {
   document.getElementById('oMsg').textContent='Generating application summary...';
   ol.classList.add('show');
   try {
-    const raw=await claude([...history,{role:'user',content:'Please extract all information from this conversation (including any document analyses) into the JSON format specified in your instructions. Return only the JSON.'}],SYS_EXTRACT,3000);
+    const raw=await claude([...history,{role:'user',content:'Please extract all information from this conversation (including any document analyses) into the JSON format specified in your instructions. Return only the JSON.'}],SYS_EXTRACT,6000);
     let data;
     try { const clean=raw.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim(); data=JSON.parse(clean); }
     catch(pe) { const m=raw.match(/\{[\s\S]*\}/); if(m) data=JSON.parse(m[0]); else throw new Error('JSON parse failed'); }
@@ -859,6 +899,38 @@ function renderPreview(d, crmResults) {
   const today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
   const docHTML=(uploadedDocCount>0||docs.bank_statement_analysed||docs.id_verified)?`<div class="p-row full"><div class="panel"><div class="panel-hdr"><div class="p-icon pi-b"><svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 7V3.5L18.5 9H13zm-2 8H7v-2h4v2zm6-4H7v-2h10v2z"/></svg></div><span class="panel-title">Document Analysis</span><span class="panel-mod">Analysed in-session - not stored</span></div><div class="panel-body"><div style="background:var(--blue-lt);border:1px solid #bfdbfe;border-radius:8px;padding:10px 13px;font-size:12px;color:var(--blue);margin-bottom:14px">Documents were analysed during this intake session only. Files are never stored by NZF or Anthropic. Only this analysis summary is retained.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:20px"><div><div class="note-sec"><div class="note-lbl">ID Document</div><div class="note-txt">${docs.id_type||'<span class="f-val nil">Not uploaded</span>'}</div></div><div class="note-sec"><div class="note-lbl">Identity Verification</div><div class="note-txt">${docs.id_verified?'<span class="tag tag-g">\u2713 Verified</span>':'<span class="f-val nil">Not verified</span>'}</div></div><div class="note-sec"><div class="note-lbl">Name Match</div><div class="note-txt">${F(docs.id_name_match)}</div></div><div class="note-sec"><div class="note-lbl">Bank Statement</div><div class="note-txt">${docs.bank_statement_analysed?'<span class="tag tag-g">\u2713 Analysed</span>':'<span class="f-val nil">No</span>'}</div></div></div><div><div class="note-sec"><div class="note-lbl">Income (from statements)</div><div class="note-txt">${F(docs.bank_income_summary)}</div></div><div class="note-sec"><div class="note-lbl">Expenses (from statements)</div><div class="note-txt">${F(docs.bank_expense_summary)}</div></div><div class="note-sec"><div class="note-lbl">Average Balance</div><div class="note-txt">${F(docs.bank_average_balance)}</div></div><div class="note-sec"><div class="note-lbl">Behavioural Alerts</div><div class="note-txt" style="margin-top:4px">${alertsH}</div></div></div></div></div></div></div>`:'';
 
+  // Build full transcript from history
+  const transcriptHTML = (() => {
+    const msgs = history.filter(m => {
+      if (m.role === 'user' && m.content === 'Please begin the intake conversation.') return false;
+      if (m.role === 'user' && typeof m.content === 'string' && m.content.startsWith('Please extract all information')) return false;
+      if (m.role === 'user' && typeof m.content !== 'string') return false; // document base64 messages
+      return true;
+    });
+    if (!msgs.length) return '';
+    const rows = msgs.map(m => {
+      const isAgent = m.role === 'assistant';
+      const label = isAgent ? 'Nour (NZF Intake Agent)' : 'Applicant';
+      const bg = isAgent ? 'var(--warm)' : '#fff';
+      const align = isAgent ? 'left' : 'right';
+      const border = isAgent ? 'border-left:3px solid var(--red)' : 'border-right:3px solid var(--border)';
+      const text = typeof m.content === 'string' ? m.content.replace(/\n/g,'<br>') : '[Document uploaded]';
+      return `<div style="margin-bottom:12px;text-align:${align}">
+        <div style="display:inline-block;max-width:85%;text-align:left;background:${bg};border:1px solid var(--border);${border};border-radius:8px;padding:9px 13px">
+          <div style="font-size:10px;font-weight:600;color:var(--muted);margin-bottom:4px;letter-spacing:.04em;text-transform:uppercase">${label}</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.6">${text}</div>
+        </div>
+      </div>`;
+    }).join('');
+    return `<div class="p-row full"><div class="panel"><div class="panel-hdr">
+      <div class="p-icon pi-b"><svg viewBox="0 0 24 24"><path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z"/></svg></div>
+      <span class="panel-title">Full Conversation Transcript</span>
+      <span class="panel-mod">${msgs.length} messages</span>
+    </div>
+    <div class="panel-body" style="max-height:500px;overflow-y:auto">${rows}</div>
+    </div></div>`;
+  })();
+
   document.getElementById('prevMain').innerHTML=`
   <div class="act-bar"><p>Review all fields carefully. "Not captured" fields were not disclosed during intake. CRM write-back in Phase 2.</p><button class="btn btn-ghost" onclick="goBack()">&larr; Edit conversation</button><button class="btn btn-dis">Send to Zoho CRM (Phase 2)</button></div>
   <div style="background:${priS.bg};border:1px solid ${priS.bc};border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px"><div style="font-size:28px">${priS.icon}</div><div><div style="font-size:15px;font-weight:700;color:${priS.col};margin-bottom:3px">${priS.label}</div><div style="font-size:12px;color:${priS.col};opacity:.8">NZF Case Urgency Guideline - Assigned by AI intake agent - Zakat Officer must confirm</div></div></div>
@@ -911,6 +983,7 @@ function renderPreview(d, crmResults) {
     </div>
     <div class="ai-disclaimer">This AI assessment is a guide only. All eligibility determinations and funding decisions are made by qualified NZF Zakat Officers based on Zakat principles and the NZF assessment framework. No support is guaranteed or implied at any stage of the intake process.</div>
   </div></div></div>
+  ${transcriptHTML}
   <div class="act-bar"><p>Phase 2 will connect this directly to Zoho CRM - creating the Contact, Case, and Intake Note automatically.</p><button class="btn btn-ghost" onclick="goBack()">&larr; Back to conversation</button><button class="btn btn-dis">Send to Zoho CRM (Phase 2)</button></div>`;
 }
 </script>
