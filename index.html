@@ -641,8 +641,9 @@ function triggerP1Emergency() {
   if (isEmergency) return; // already triggered
   isEmergency = true;
   capturedInfo['\uD83D\uDEA8 PRIORITY 1'] = 'Critical Risk - 24hr';
-  // Bypass: P1 only needs name + mobile to submit
-  ['dob','situation','email','address','need'].forEach(k => { MIN[k].ok = true; });
+  // P1 bypass: only mobile required. Name, DOB, email, address, situation, need all waived.
+  // The Zakat Officer will confirm name and details on the follow-up call.
+  ['name','dob','situation','email','address','need'].forEach(k => { MIN[k].ok = true; });
   document.getElementById('subArea').style.background = '#fff5f5';
   document.getElementById('subArea').style.borderTop = '2px dashed var(--red)';
   const hint = document.getElementById('subHint');
@@ -669,10 +670,14 @@ function checkRequirements() {
 function captureInfo(text) {
   const t = text.toLowerCase();
 
-  // Name
-  const nm = text.match(/(?:my name is|i(?:'m| am)|call me) ([A-Z][a-zA-Z]+(?: [A-Z][a-zA-Z]+)*)/i);
-  if (nm && nm[1] && !['My','Hi','Hello','Yes','No','OK','I'].includes(nm[1])) {
-    capturedInfo['Name'] = nm[1]; MIN.name.ok = true;
+  // Name — catch formal and natural patterns
+  // e.g. "my name is Sarah", "I'm Sarah Al-Hassan", "It's Sarah", just "Sarah", "Sarah" alone
+  const STOPWORDS = new Set(['My','Hi','Hello','Yes','No','OK','I','It','The','We','He','She','They','Yes','No','Sorry','Thanks','Good','Fine']);
+  const nmFormal = text.match(/(?:my name(?:'s| is)|i(?:'m| am)|call me|it'?s) ([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)/i);
+  const nmSimple = text.match(/^([A-Z][a-zA-Z\-']+(?:\s+[A-Z][a-zA-Z\-']+)?)[\.,!]?\s*$/); // Just a name by itself
+  const nmMatch = (nmFormal && nmFormal[1]) || (nmSimple && nmSimple[1]);
+  if (nmMatch && !STOPWORDS.has(nmMatch.split(' ')[0])) {
+    capturedInfo['Name'] = nmMatch; MIN.name.ok = true;
   }
 
   // Date of birth
