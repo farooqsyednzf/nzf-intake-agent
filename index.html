@@ -593,7 +593,7 @@ async function send() {
 // ---- Document Upload 
 async function handleFileUpload(input) {
   const file = input.files[0]; if (!file) return; input.value='';
-  if (file.size > 5*1024*1024) { showErr('File too large - please upload files under 5MB.'); return; }
+  if (file.size > 4*1024*1024) { showErr('File too large - please upload files under 4MB.'); return; }
   if (!['application/pdf','image/png','image/jpeg'].includes(file.type)) { showErr('Please upload a PDF, PNG, or JPG file.'); return; }
   const shortName = file.name.length>35 ? file.name.substring(0,32)+'...' : file.name;
   addMsg('doc', '\uD83D\uDCCE ' + shortName + '\n\nSecurely uploading and analysing...');
