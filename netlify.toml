@@ -8,6 +8,12 @@
 [functions]
   node_bundler = "esbuild"
 
+# Serve the SPA at /officer directly
+[[redirects]]
+  from = "/officer"
+  to = "/index.html"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
