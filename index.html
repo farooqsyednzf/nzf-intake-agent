@@ -438,13 +438,14 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
     <!-- Login panel — shown until authenticated -->
     <div id="officerLoginPanel" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:32px;text-align:center">
       <div style="font-size:40px;margin-bottom:16px">&#128274;</div>
-      <h2 style="font-family:var(--ff-d);font-size:22px;margin-bottom:8px">Sign in to continue</h2>
-      <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:360px;margin:0 auto 24px">This tool is for NZF Zakat Officers only. Sign in with your Zoho account to verify your access.</p>
-      <button onclick="officerSignIn()" style="padding:12px 28px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;font-family:var(--ff-b);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--red-dk)'" onmouseout="this.style.background='var(--red)'">
-        Sign in with Zoho
-      </button>
-      <div id="officerLoginError" style="display:none;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red-dk);margin-top:16px"></div>
-      <div id="officerLoginLoading" style="display:none;margin-top:16px;font-size:13px;color:var(--muted)">Verifying your Zoho account...</div>
+      <h2 style="font-family:var(--ff-d);font-size:22px;margin-bottom:8px">Zakat Officer Access</h2>
+      <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:360px;margin:0 auto 20px">Enter the NZF officer access code to continue. Contact your administrator if you don't have it.</p>
+      <div style="display:flex;gap:8px;max-width:320px;margin:0 auto">
+        <input id="officerAccessCode" type="password" placeholder="Enter access code" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:14px;font-family:var(--ff-b);outline:none;background:var(--cream)" onkeydown="if(event.key==='Enter')verifyOfficerCode()" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'">
+        <button onclick="verifyOfficerCode()" style="padding:11px 18px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;font-family:var(--ff-b);cursor:pointer;white-space:nowrap">Enter</button>
+      </div>
+      <div id="officerLoginError" style="display:none;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red-dk);margin-top:12px;max-width:320px;margin-left:auto;margin-right:auto"></div>
+      <div id="officerLoginLoading" style="display:none;margin-top:12px;font-size:13px;color:var(--muted)">Verifying...</div>
     </div>
 
     <!-- Authenticated user badge — shown after login -->
@@ -791,12 +792,6 @@ async function claude(messages, system, maxTokens, attempt=0) {
 
 // ---- Init 
 async function initChat() {
-  // Handle Zoho OAuth callback if returning from login
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('state') === 'officer_login' && urlParams.get('code')) {
-    handleOfficerCallback(urlParams.get('code'));
-    return;
-  }
   showTyping();
   const initMsg = { role:'user', content:'Please begin the intake conversation.' };
   try {
@@ -1596,17 +1591,6 @@ Rules: contact from Contacts record. case_types from ["Financial hardship - food
 // ---- Zakat Officer Auth ----
 
 function initOfficerMode() {
-  // Check for OAuth callback code in URL first
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
-  const state = params.get('state');
-  if (code && state === 'officer_login') {
-    // Clean the URL immediately
-    window.history.replaceState({}, '', window.location.pathname);
-    handleOfficerCallback(code);
-    return;
-  }
-  // Check for existing valid session
   const session = getOfficerSession();
   if (session) {
     showOfficerAuthenticated(session.name, session.email);
@@ -1631,12 +1615,36 @@ function showOfficerAuthenticated(name, email) {
   document.getElementById('officerUserName').textContent = '\u2705 Signed in as ' + name + ' (' + email + ')';
 }
 
-function officerSignIn() {
-  const clientId = '1000.6JXG1CQK4Y5TM9EX4N1MOJ4GNWN9IL';
-  const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
-  const scope = encodeURIComponent('ZohoCRM.users.READ');
-  const zohoAuthUrl = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&access_type=online&state=officer_login&prompt=select_account`;
-  window.location.href = zohoAuthUrl;
+async function verifyOfficerCode() {
+  const input    = document.getElementById('officerAccessCode');
+  const errDiv   = document.getElementById('officerLoginError');
+  const loadDiv  = document.getElementById('officerLoginLoading');
+  const code     = (input?.value || '').trim();
+  if (!code) { errDiv.textContent = 'Please enter the access code.'; errDiv.style.display = 'block'; return; }
+  errDiv.style.display = 'none';
+  loadDiv.style.display = 'block';
+  try {
+    const res  = await fetch('/.netlify/functions/officer-auth', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ access_code: code })
+    });
+    const data = await res.json();
+    loadDiv.style.display = 'none';
+    if (!data.success) {
+      errDiv.textContent = data.error || 'Incorrect code. Please try again.';
+      errDiv.style.display = 'block';
+      input.value = '';
+      input.focus();
+      return;
+    }
+    const session = { name: 'Zakat Officer', email: 'officer@nzf.org.au', token: data.session_token, expiry: Date.now() + (8 * 60 * 60 * 1000) };
+    sessionStorage.setItem('nzf_officer_session', JSON.stringify(session));
+    showOfficerAuthenticated('Zakat Officer', '');
+  } catch(e) {
+    loadDiv.style.display = 'none';
+    errDiv.textContent = 'Connection error. Please try again.';
+    errDiv.style.display = 'block';
+  }
 }
 
 function officerSignOut() {
