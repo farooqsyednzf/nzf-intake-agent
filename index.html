@@ -397,7 +397,7 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       <div class="sc">
         <div class="sc-hdr"><span class="sc-title">Useful Documents</span></div>
         <div class="sc-body" style="padding-top:10px;padding-bottom:10px">
-          <p style="font-size:11px;color:var(--muted);margin-bottom:9px;line-height:1.5">If you have any of these, attaching them helps our Zakat Officers assess your application faster. All optional.</p>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:9px;line-height:1.5">If you have any of these, attaching them helps our Zakat Officers assess your application faster.</p>
           <div class="doc-checklist">
             <div class="doc-item" id="dci-bank"><span class="doc-icon">&#128196;</span><span>Bank statements</span></div>
             <div class="doc-item" id="dci-income"><span class="doc-icon">&#128196;</span><span>Proof of income <span class="doc-eg">payslip, Centrelink letter</span></span></div>
@@ -555,7 +555,7 @@ RULES (all priorities):
 DATA TRACKING — CRITICAL, FOLLOW EXACTLY:
 At the very end of EVERY response you send, after your conversational message, append this exact JSON block on a new line. Accumulate values — once captured, keep them in every subsequent response. Use null for anything not yet known. This block is parsed by the system and never shown to the applicant.
 
-{"_d":{"name":null,"dob":null,"mobile":null,"email":null,"address":null,"need":null,"situation":false,"income_source":null,"monthly_income":null,"monthly_rent":null,"other_expenses":null,"children":null,"children_ages":null,"household_size":null,"marital_status":null,"medical":null,"dv":false,"amount":null,"returning":false,"accommodation":null,"residency":null,"interpreter":false,"interpreter_lang":null,"trigger_category":null,"trigger_detail":null,"what_tried":null,"human_impact":null,"support_network":null,"replies":[]}}
+{"_d":{"name":null,"dob":null,"mobile":null,"email":null,"address":null,"need":null,"situation":false,"income_source":null,"monthly_income":null,"monthly_rent":null,"other_expenses":null,"children":null,"children_ages":null,"household_size":null,"marital_status":null,"medical":null,"dv":false,"amount":null,"returning":false,"accommodation":null,"residency":null,"interpreter":false,"interpreter_lang":null,"trigger_category":null,"trigger_detail":null,"what_tried":null,"human_impact":null,"support_network":null,"replies":[],"priority":null}}
 
 Rules for each field:
 - name: Full name as stated (e.g. "Sarah Syed"). Keep once captured.
@@ -586,11 +586,12 @@ Rules for each field:
 - what_tried: What the client has already tried before reaching out (e.g. "Applied for Centrelink, asked family - no support available"). null until asked.
 - human_impact: Brief note on emotional/social impact beyond finances (e.g. "Severe stress, children's school attendance affected, socially isolated"). null until captured.
 - support_network: Whether family, friends or community can help (e.g. "No family in Australia, community unable to assist"). null until clear.
+- priority: The NZF priority level you have assessed for this case. One of: "P1", "P2", "P3", "P4". Update this as the conversation reveals urgency. P1 = life-threatening (rough sleeping, no food, fleeing danger, funeral, emergency medication). P2 = high risk within days (imminent eviction, utility disconnection, baby formula/heating/hygiene). P3 = moderate (no 14-day impact). P4 = low (long-term/deferred).
 - replies: Array of 2-4 short suggested reply options relevant to your LAST question or statement. These appear as tap buttons for the applicant. Make them natural, conversational, and directly relevant — not generic. Max 5 words each. Empty array if no obvious replies make sense (e.g. after a flowing narrative response). Examples: after asking about income → ["I'm on Centrelink", "I'm employed", "No income currently"]. After asking about children → ["Yes, I have children", "No children"]. After a DV disclosure → ["I am safe right now", "I am not safe"]. After asking for mobile → []. Never repeat the same replies twice in a row.
 
 Example of a valid response ending:
 ...and our team will do their very best to support you.
-{"_d":{"name":"Fatimah Al-Hassan","dob":"15 March 1988","mobile":"0412345678","email":"fatimah@email.com","address":"Auburn 2144","need":"Housing","situation":true,"income_source":"Centrelink","monthly_income":1632,"monthly_rent":1800,"other_expenses":"$380/month food, $120/month utilities","children":2,"children_ages":"3, 7","household_size":3,"marital_status":"Single","medical":null,"dv":false,"amount":2000,"returning":false,"accommodation":"Renting","residency":"Permanent resident","interpreter":false,"interpreter_lang":null,"trigger_category":"Family breakdown","trigger_detail":"Husband left the family 4 months ago. Was previously two incomes. Now sole parent with no child support being paid.","what_tried":"Applied for Centrelink JobSeeker, asked family - no one able to help financially","human_impact":"Severe stress and anxiety, struggling to sleep. Children aware of financial pressure.","support_network":"No family in Australia. Community has provided some food but cannot assist financially.","replies":["Yes, I have documents","I don't have any","I'll try to get some"]}}
+{"_d":{"name":"Fatimah Al-Hassan","dob":"15 March 1988","mobile":"0412345678","email":"fatimah@email.com","address":"Auburn 2144","need":"Housing","situation":true,"income_source":"Centrelink","monthly_income":1632,"monthly_rent":1800,"other_expenses":"$380/month food, $120/month utilities","children":2,"children_ages":"3, 7","household_size":3,"marital_status":"Single","medical":null,"dv":false,"amount":2000,"returning":false,"accommodation":"Renting","residency":"Permanent resident","interpreter":false,"interpreter_lang":null,"trigger_category":"Family breakdown","trigger_detail":"Husband left the family 4 months ago. Was previously two incomes. Now sole parent with no child support being paid.","what_tried":"Applied for Centrelink JobSeeker, asked family - no one able to help financially","human_impact":"Severe stress and anxiety, struggling to sleep. Children aware of financial pressure.","support_network":"No family in Australia. Community has provided some food but cannot assist financially.","replies":["Yes, I have documents","I don't have any","I'll try to get some"],"priority":"P2"}}
 
 Start every conversation with a warm greeting in English and Arabic, introduce yourself as Nour, and ask their name.`;
 
@@ -881,6 +882,29 @@ function addMsg(role, text) {
     if (dataMatch) {
       try {
         const d = JSON.parse(dataMatch[0])._d;
+        // Priority bypass — driven by agent's own assessment from _d block
+        if (d.priority === 'P1') {
+          ['dob','situation','email','address','need'].forEach(k => { MIN[k].ok = true; });
+          if (!isEmergency) {
+            isEmergency = true;
+            capturedInfo['\uD83D\uDEA8 PRIORITY 1'] = 'Critical Risk - 24hr';
+            document.getElementById('subArea').style.background = '#fff5f5';
+            document.getElementById('subArea').style.borderTop = '2px dashed var(--red)';
+            const hint = document.getElementById('subHint');
+            if (hint) hint.textContent = 'Please submit now. A Zakat Officer will contact you within 24 hours as an urgent priority.';
+            const btn2 = document.querySelector('.sub-btn');
+            if (btn2) btn2.innerHTML = '\uD83D\uDEA8 Submit Emergency Application - 24hr Priority';
+            const banner = document.getElementById('emergencyBanner');
+            if (banner) banner.style.display = 'block';
+          }
+        } else if (d.priority === 'P2') {
+          ['dob','email'].forEach(k => { MIN[k].ok = true; });
+          if (!capturedInfo['\u26A0 P2']) {
+            capturedInfo['\u26A0 P2'] = 'High Risk - 2-7 days';
+            const hint = document.getElementById('subHint');
+            if (hint && !hint.textContent.includes('2-7')) hint.textContent = 'You can submit now - a Zakat Officer will be in touch within 2-7 days.';
+          }
+        }
         // MIN gate — driven by model understanding, not regex
         if (d.name)      { MIN.name.ok = true; }
         if (d.dob)       { MIN.dob.ok = true; }
