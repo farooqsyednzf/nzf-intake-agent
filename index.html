@@ -1459,6 +1459,28 @@ async function runCaseReview() {
     const docAnalyses = await Promise.all(docAnalysisPromises);
 
     // Phase 3: Final assessment — slim text-only dossier (no base64, no unneeded fields)
+    setMsg('Preparing case summary...');
+
+    // Summarise notes if they are long — preserves all information, just more concise
+    let processedNotes;
+    const rawNotesText = (notes||[]).map(n => `[${n.Created_Time?.substring(0,10)} — ${n.Created_By?.name}] ${n.Note_Title}: ${n.Note_Content}`).join('\n\n');
+    if (rawNotesText.length > 3000) {
+      try {
+        setMsg('Summarising case notes...');
+        const summary = await claude(
+          [{ role: 'user', content: `Summarise the following NZF caseworker notes into a concise but complete narrative for a Zakat Officer reviewing the case. Preserve all key facts: dates, amounts, decisions, actions taken, and outcomes. Do not omit anything important — just write it more concisely.\n\n${rawNotesText}` }],
+          'You are a case note summariser for NZF Australia. Produce a clear, factual summary that preserves all important details for a Zakat Officer review. Write in plain prose, not bullet points.',
+          800
+        );
+        processedNotes = [{ title: 'Case Notes Summary', content: summary, by: 'AI Summary', date: new Date().toISOString() }];
+      } catch(e) {
+        // Fallback: use notes as-is if summarisation fails
+        processedNotes = (notes||[]).map(n => ({ title: n.Note_Title, content: n.Note_Content, by: n.Created_By?.name, date: n.Created_Time }));
+      }
+    } else {
+      processedNotes = (notes||[]).map(n => ({ title: n.Note_Title, content: n.Note_Content, by: n.Created_By?.name, date: n.Created_Time }));
+    }
+
     setMsg('Generating assessment...');
     const slimCase = { CASE_ID: caseRecord?.CASE_ID, Deal_Name: caseRecord?.Deal_Name,
       Stage: caseRecord?.Stage, Priority: caseRecord?.Priority, Case_Type1: caseRecord?.Case_Type1,
@@ -1479,14 +1501,13 @@ async function runCaseReview() {
       Weekly_Rent: contact?.Weekly_Rent, MEDICAL_CONDITION: contact?.MEDICAL_CONDITION,
       Domestic_Violence: contact?.Domestic_Violence, Cultural_Identity: contact?.Cultural_Identity,
       Lead_Source: contact?.Lead_Source };
-    const slimNotes = (notes||[]).map(n => ({ title: n.Note_Title, content: n.Note_Content, by: n.Created_By?.name, date: n.Created_Time }));
     const slimDist  = (distributions||[]).map(d => ({ id: d.Distribution_ID, subject: d.Subject, amount: d.Grand_Total, status: d.Status, date: d.Approved_Date, category: d.Zakat_Category_ies }));
-    const dossier = { case: slimCase, contact: slimContact, notes: slimNotes, distributions: slimDist,
+    const dossier = { case: slimCase, contact: slimContact, notes: processedNotes, distributions: slimDist,
       attachments: { analysed: docAnalyses, skipped, total_in_crm: attachments?.total_in_crm || 0 }
     };
     const rawJson = await claude(
       [{ role: 'user', content: 'Review this NZF case and produce the assessment JSON.\n\n' + JSON.stringify(dossier, null, 2) }],
-      SYS_OFFICER_ASSESS, 6000
+      SYS_OFFICER_ASSESS, 3000
     );
     let assessment;
     try {
