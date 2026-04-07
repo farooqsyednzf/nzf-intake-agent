@@ -416,7 +416,7 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       </div>
     </div>
   </div>
-  <footer class="ftr">National Zakat Foundation Australia &middot; ACNC registered &middot; <a href="tel:1300663729">1300 663 729</a> &middot; <a href="mailto:info@nzf.org.au">info@nzf.org.au</a> &nbsp;&middot;&nbsp; <a href="#" onclick="show('s-officer');return false;" style="color:var(--muted);font-size:10px;opacity:.6">&#128274; Zakat Officer Mode</a></footer>
+  <footer class="ftr">National Zakat Foundation Australia &middot; ACNC registered &middot; <a href="tel:1300663729">1300 663 729</a> &middot; <a href="mailto:info@nzf.org.au">info@nzf.org.au</a> &nbsp;&middot;&nbsp; <a href="/officer" style="color:var(--muted);font-size:10px;opacity:.6">&#128274; Zakat Officer Mode</a></footer>
 </div>
 
 <!-- SCREEN: ZAKAT OFFICER CASE REVIEW -->
@@ -471,7 +471,7 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       <p id="officerLoadMsg" style="font-size:14px;color:var(--muted)">Connecting to Zoho CRM...</p>
     </div>
   </div>
-  <footer class="ftr"><a href="#" onclick="show('s-chat');return false;" style="color:var(--red)">&larr; Back to Intake Agent</a></footer>
+  <footer class="ftr"><a href="/" style="color:var(--red)">&larr; Back to Intake Agent</a></footer>
 </div>
 
 <!-- SCREEN: CRM PREVIEW -->
@@ -812,6 +812,13 @@ async function claude(messages, system, maxTokens, attempt=0) {
 
 // ---- Init 
 async function initChat() {
+  // Direct URL: /officer → skip intake agent, go straight to officer mode
+  if (window.location.pathname === '/officer') {
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById('s-officer').classList.add('active');
+    initOfficerMode();
+    return;
+  }
   // Handle Zoho OAuth callback if returning from login
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get('state') === 'officer_login' && urlParams.get('code')) {
