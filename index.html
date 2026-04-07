@@ -397,12 +397,12 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       <div class="sc">
         <div class="sc-hdr"><span class="sc-title">Useful Documents</span></div>
         <div class="sc-body" style="padding-top:10px;padding-bottom:10px">
-          <p style="font-size:11px;color:var(--muted);margin-bottom:9px;line-height:1.5">If you have any of these, attaching them helps our Zakat Officers assess your application faster.</p>
+          <p style="font-size:11px;color:var(--muted);margin-bottom:9px;line-height:1.5">These documents are required for your case to be assessed. Attach them now or send them after submitting.</p>
           <div class="doc-checklist">
-            <div class="doc-item" id="dci-bank"><span class="doc-icon">&#128196;</span><span>Bank statements</span></div>
-            <div class="doc-item" id="dci-income"><span class="doc-icon">&#128196;</span><span>Proof of income <span class="doc-eg">payslip, Centrelink letter</span></span></div>
-            <div class="doc-item" id="dci-expenses"><span class="doc-icon">&#128196;</span><span>Proof of expenses <span class="doc-eg">rent ledger, utility bills</span></span></div>
-            <div class="doc-item" id="dci-support"><span class="doc-icon">&#128196;</span><span>Supporting letters <span class="doc-eg">medical, employer, housing</span></span></div>
+            <div class="doc-item" id="dci-bank"><span class="doc-icon">&#128196;</span><span>Bank statements <span class="doc-eg">Latest 3 months, PDF format, all accounts</span></span></div>
+            <div class="doc-item" id="dci-income"><span class="doc-icon">&#128196;</span><span>Proof of income <span class="doc-eg">Centrelink statement, payslip</span></span></div>
+            <div class="doc-item" id="dci-id"><span class="doc-icon">&#128196;</span><span>Photo ID <span class="doc-eg">Passport, licence, proof of age, visa</span></span></div>
+            <div class="doc-item" id="dci-expenses"><span class="doc-icon">&#128196;</span><span>Supporting documents <span class="doc-eg">Lease, eviction notice, medical, legal</span></span></div>
           </div>
         </div>
       </div>
@@ -596,9 +596,30 @@ There are pieces of information we must collect before submission. Gather them n
 
 9. VULNERABILITIES - medical conditions, DV situation (extreme care and sensitivity, never press for details), disability, caring responsibilities.
 
-10. DOCUMENTS - MANDATORY before wrap-up. Say: "Before I let you submit, can I just check - do you happen to have any documents you could attach? Even a photo of your ID and a recent bank statement would really help our Zakat Officers assess your application faster. Just tap the paperclip icon if you do. Completely optional, but it makes a big difference." Wait for their response before wrapping up.
+10. DOCUMENTS - MANDATORY before wrap-up. This is a critical stage. Follow these steps exactly:
 
-WRAP-UP - only after stage 10: "I think I have everything I need. The Submit button below should now be available - feel free to add anything else before you send it through."
+STEP A — Introduce the document requirements warmly but clearly. Cover all of the following in a natural way across 2-3 messages (not as a list dump):
+
+ALWAYS REQUIRED:
+- Photo ID: Passport, Driver Licence, Proof of Age card, or Copy of Visa
+- Bank statements: Latest 3 months for ALL bank accounts in their name (including joint accounts). Must be PDF format, not photos.
+- Proof of income: Centrelink Income Statement, payslip, or work-related document
+
+CASE-SPECIFIC (ask about and mention if their situation involves any of these):
+- Rent/Bond help → lease agreement or eviction notice
+- Legal or police matters → police report, AVO letter, court evidence
+- Medical/health → doctor or hospital report
+- Funeral costs → service provider invoice or evidence of debt
+
+STEP B — Emphasise that case assessment CANNOT proceed without documents. Say something like: "I want to be upfront — our Zakat Officers aren't able to start assessing your case until they receive the documents. Once they have everything, they'll be in touch within 2 to 5 working days, though during busy periods it may take a little longer."
+
+STEP C — If the applicant says they don't have documents now or can't attach them: reassure them they can still submit, but let them know clearly: "That's okay — you can still submit your application now. You'll receive a confirmation email after you submit with details on how to send your documents through to us."
+
+STEP D — Overseas applicants: if the applicant has mentioned they are outside Australia, gently let them know: "I also want to mention — NZF Australia is unfortunately unable to send funds overseas. If you're based outside of Australia, we'd kindly refer you to your local Zakat agency."
+
+STEP E — Invite them to attach anything they have now using the paperclip icon. Wait for their response before wrapping up.
+
+WRAP-UP - only after stage 10: If they attached documents: "I think I have everything I need. The Submit button below should now be available — please go ahead when you're ready." If they couldn't attach documents: "That's okay, you can still go ahead and submit now. The Submit button below is ready — you'll get an email after submitting with details on how to send your documents through."
 
 RULES (all priorities):
 - DV: express deep care, assure confidentiality, never press for details
@@ -889,8 +910,8 @@ async function handleFileUpload(input) {
     const al = analysis.toLowerCase();
     if (al.includes('bank statement')) tickDoc('dci-bank');
     else if (al.includes('payslip')||al.includes('centrelink')||al.includes('income statement')) tickDoc('dci-income');
-    else if (al.includes('rent ledger')||al.includes('utility')||al.includes('lease')) tickDoc('dci-expenses');
-    else if (al.includes('medical')||al.includes('employer letter')||al.includes('housing letter')||al.includes('support letter')) tickDoc('dci-support');
+    else if (al.includes('passport')||al.includes('driver licence')||al.includes('proof of age')||al.includes('visa')||al.includes('id verified')) tickDoc('dci-id');
+    else if (al.includes('lease')||al.includes('eviction')||al.includes('medical')||al.includes('police')||al.includes('court')||al.includes('funeral')) tickDoc('dci-expenses');
     else tickDoc('dci-bank'); // default to first unchecked
     // Store analysis in history (text only - no base64), never show to client
     history.push(
@@ -919,11 +940,9 @@ async function handleFileUpload(input) {
 }
 function showErr(msg) { const b=document.getElementById('errBar'); b.textContent=msg; b.style.display='block'; setTimeout(()=>b.style.display='none',4000); }
 function tickDoc(id) {
-  // Mark a doc checklist item as uploaded, or the first un-ticked one if already done
   const el = document.getElementById(id);
   if (el && !el.classList.contains('uploaded')) { el.classList.add('uploaded'); return; }
-  // If already ticked, find first un-ticked
-  const all = ['dci-bank','dci-income','dci-expenses','dci-support'];
+  const all = ['dci-bank','dci-income','dci-id','dci-expenses'];
   for (const i of all) { const e=document.getElementById(i); if(e&&!e.classList.contains('uploaded')){e.classList.add('uploaded');return;} }
 }
 
