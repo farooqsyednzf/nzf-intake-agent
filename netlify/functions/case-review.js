@@ -105,6 +105,23 @@ exports.handler = async (event) => {
         return `${att.File_Name} (limit reached)`;
       });
 
+
+    const downloadResults = await Promise.allSettled(
+      eligible.map(async (att) => {
+        const ext = att.File_Name.toLowerCase().match(/\.[^.]+$/)?.[0];
+        const res = await fetch(`${crmBaseUrl}/crm/v2/Potentials/${caseInternalId}/Attachments/${att.id}`, { headers: auth });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const buf = await res.arrayBuffer();
+        return {
+          file_name: att.File_Name,
+          media_type: SUPPORTED[ext],
+          base64: Buffer.from(buf).toString('base64'),
+          uploaded_by: att.Created_By?.name || 'Unknown',
+          size_kb: Math.round(parseInt(att.Size||0) / 1024),
+        };
+      })
+    );
+
     const downloaded = downloadResults.filter(r => r.status === 'fulfilled').map(r => r.value);
     const failedDL   = downloadResults.filter(r => r.status === 'rejected').map((r,i) => `${eligible[i]?.File_Name} (download failed)`);
 
