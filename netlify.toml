@@ -5,6 +5,14 @@
 [functions]
   node_bundler = "esbuild"
 
+# Default timeout for all functions
+[functions."*"]
+  timeout = 26
+
+# Case review needs longer — it fetches CRM data + downloads attachments + calls Claude
+[functions."case-review"]
+  timeout = 26
+
 [[headers]]
   for = "/*"
   [headers.values]
