@@ -1439,11 +1439,10 @@ async function runCaseReview() {
     const downloaded = attachments?.downloaded || [];
     const skipped    = attachments?.skipped || [];
 
-    // Phase 2: Analyse each attachment via browser -> chat.js proxy (avoids gateway timeout)
-    const docAnalyses = [];
-    for (let i = 0; i < downloaded.length; i++) {
-      const att = downloaded[i];
-      setMsg(`Analysing document ${i+1} of ${downloaded.length}: ${att.file_name}...`);
+    // Phase 2: Analyse attachments IN PARALLEL via browser -> chat.js proxy
+    // Parallel keeps total time to max(slowest_doc) rather than sum(all_docs)
+    setMsg(`Analysing ${downloaded.length} document${downloaded.length !== 1 ? 's' : ''}...`);
+    const docAnalysisPromises = downloaded.map(async (att) => {
       try {
         const contentBlock = att.media_type === 'application/pdf'
           ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: att.base64 } }
@@ -1452,15 +1451,37 @@ async function runCaseReview() {
           [{ role: 'user', content: [contentBlock, { type: 'text', text: 'Analyse this document for NZF case ' + caseId + '.' }] }],
           SYS_DOC_OFFICER, 800
         );
-        docAnalyses.push({ file_name: att.file_name, analysis: analysisText });
+        return { file_name: att.file_name, analysis: analysisText };
       } catch(e) {
-        docAnalyses.push({ file_name: att.file_name, analysis: 'Analysis failed: ' + e.message });
+        return { file_name: att.file_name, analysis: 'Analysis failed: ' + e.message };
       }
-    }
+    });
+    const docAnalyses = await Promise.all(docAnalysisPromises);
 
-    // Phase 3: Final assessment — text only, fast (browser -> chat.js proxy)
+    // Phase 3: Final assessment — slim text-only dossier (no base64, no unneeded fields)
     setMsg('Generating assessment...');
-    const dossier = { case: caseRecord, contact, notes, distributions,
+    const slimCase = { CASE_ID: caseRecord?.CASE_ID, Deal_Name: caseRecord?.Deal_Name,
+      Stage: caseRecord?.Stage, Priority: caseRecord?.Priority, Case_Type1: caseRecord?.Case_Type1,
+      Zakat_Category: caseRecord?.Zakat_Category, Description: caseRecord?.Description,
+      Case_Notes_Summary: caseRecord?.Case_Notes_Summary, CW_Recommendation: caseRecord?.CW_Recommendation,
+      NDM_Reviewed: caseRecord?.NDM_Reviewed, NM_Reviewed: caseRecord?.NM_Reviewed,
+      SDM_Reviewed: caseRecord?.SDM_Reviewed, Reason_for_Not_Funding: caseRecord?.Reason_for_Not_Funding,
+      New_or_existing: caseRecord?.New_or_existing, Created_Time: caseRecord?.Created_Time };
+    const slimContact = { First_Name: contact?.First_Name, Last_Name: contact?.Last_Name,
+      Date_of_Birth: contact?.Date_of_Birth, Sex: contact?.Sex, Email: contact?.Email,
+      Mobile: contact?.Mobile, Mailing_Street: contact?.Mailing_Street, Mailing_City: contact?.Mailing_City,
+      Mailing_State: contact?.Mailing_State, Mailing_Zip: contact?.Mailing_Zip,
+      Marital_Status: contact?.Marital_Status, Total_Number_of_Household: contact?.Total_Number_of_Household,
+      No_Children_0_4_yrs: contact?.No_Children_0_4_yrs, No_Children_5_11_yrs: contact?.No_Children_5_11_yrs,
+      No_Children_12_18_yrs: contact?.No_Children_12_18_yrs, No_Children_18_yrs: contact?.No_Children_18_yrs,
+      RESIDENCY_STATUS: contact?.RESIDENCY_STATUS, Interpreter_Required: contact?.Interpreter_Required,
+      Interpreter_Lanaguage: contact?.Interpreter_Lanaguage, Accomodation_Status: contact?.Accomodation_Status,
+      Weekly_Rent: contact?.Weekly_Rent, MEDICAL_CONDITION: contact?.MEDICAL_CONDITION,
+      Domestic_Violence: contact?.Domestic_Violence, Cultural_Identity: contact?.Cultural_Identity,
+      Lead_Source: contact?.Lead_Source };
+    const slimNotes = (notes||[]).map(n => ({ title: n.Note_Title, content: n.Note_Content, by: n.Created_By?.name, date: n.Created_Time }));
+    const slimDist  = (distributions||[]).map(d => ({ id: d.Distribution_ID, subject: d.Subject, amount: d.Grand_Total, status: d.Status, date: d.Approved_Date, category: d.Zakat_Category_ies }));
+    const dossier = { case: slimCase, contact: slimContact, notes: slimNotes, distributions: slimDist,
       attachments: { analysed: docAnalyses, skipped, total_in_crm: attachments?.total_in_crm || 0 }
     };
     const rawJson = await claude(
