@@ -1632,7 +1632,7 @@ function showOfficerAuthenticated(name, email) {
 }
 
 function officerSignIn() {
-  const clientId = '1000.4P81GMOAZNJ0XFAJT8G7MSAZJS8I4Z';
+  const clientId = '1000.6JXG1CQK4Y5TM9EX4N1MOJ4GNWN9IL';
   const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
   const scope = encodeURIComponent('ZohoCRM.users.READ');
   const zohoAuthUrl = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&access_type=online&state=officer_login&prompt=select_account`;
