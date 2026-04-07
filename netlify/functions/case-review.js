@@ -10,12 +10,14 @@
  *
  * Required env vars: ZOHO_CLIENT_ID, ZOHO_CLIENT_SECRET, ZOHO_REFRESH_TOKEN
  */
+const crypto = require('crypto');
+
 exports.handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
   }
 
-  const { case_id } = JSON.parse(event.body || '{}');
+  const { case_id, session_token } = JSON.parse(event.body || '{}');
   if (!case_id) {
     return { statusCode: 400, body: JSON.stringify({ error: 'case_id is required' }) };
   }
@@ -23,6 +25,24 @@ exports.handler = async (event) => {
   const clientId     = process.env.ZOHO_CLIENT_ID;
   const clientSecret = process.env.ZOHO_CLIENT_SECRET;
   const refreshToken = process.env.ZOHO_REFRESH_TOKEN;
+
+  // ── Verify session token ──
+  if (!session_token) {
+    return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorised: please sign in with your Zoho account', auth_required: true }) };
+  }
+  try {
+    const decoded = Buffer.from(session_token, 'base64').toString();
+    const parts = decoded.split('|');
+    if (parts.length < 4) throw new Error('Invalid token format');
+    const sig = parts.pop();
+    const payload = parts.join('|');
+    const expectedSig = crypto.createHmac('sha256', clientSecret).update(payload).digest('hex');
+    if (sig !== expectedSig) throw new Error('Invalid signature');
+    const expiry = parseInt(parts[2]);
+    if (Date.now() > expiry) throw new Error('Session expired — please sign in again');
+  } catch (err) {
+    return { statusCode: 401, body: JSON.stringify({ error: err.message, auth_required: true }) };
+  }
   const accountsUrl  = process.env.ZOHO_ACCOUNTS_URL || 'https://accounts.zoho.com';
   const crmBaseUrl   = process.env.ZOHO_CRM_BASE_URL  || 'https://www.zohoapis.com';
 
