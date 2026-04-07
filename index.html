@@ -434,7 +434,27 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
     <p style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.7">Enter a CASE-ID to pull the full case record from Zoho CRM and generate an AI-assisted assessment. For cases received by phone or manual form.</p>
   </div>
   <div style="flex:1;max-width:620px;margin:0 auto;width:100%;padding:2rem;display:flex;flex-direction:column;gap:16px">
-    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px">
+
+    <!-- Login panel — shown until authenticated -->
+    <div id="officerLoginPanel" style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:32px;text-align:center">
+      <div style="font-size:40px;margin-bottom:16px">&#128274;</div>
+      <h2 style="font-family:var(--ff-d);font-size:22px;margin-bottom:8px">Sign in to continue</h2>
+      <p style="font-size:14px;color:var(--muted);line-height:1.7;max-width:360px;margin:0 auto 24px">This tool is for NZF Zakat Officers only. Sign in with your Zoho account to verify your access.</p>
+      <button onclick="officerSignIn()" style="padding:12px 28px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;font-family:var(--ff-b);cursor:pointer;transition:background .15s" onmouseover="this.style.background='var(--red-dk)'" onmouseout="this.style.background='var(--red)'">
+        Sign in with Zoho
+      </button>
+      <div id="officerLoginError" style="display:none;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red-dk);margin-top:16px"></div>
+      <div id="officerLoginLoading" style="display:none;margin-top:16px;font-size:13px;color:var(--muted)">Verifying your Zoho account...</div>
+    </div>
+
+    <!-- Authenticated user badge — shown after login -->
+    <div id="officerUserBadge" style="display:none;background:var(--green-lt);border:1px solid #a7f3d0;border-radius:10px;padding:10px 16px;display:none;align-items:center;justify-content:space-between;font-size:13px">
+      <span id="officerUserName" style="color:#0d6b50;font-weight:500"></span>
+      <button onclick="officerSignOut()" style="background:none;border:none;font-size:11px;color:var(--muted);cursor:pointer;padding:2px 6px">Sign out</button>
+    </div>
+
+    <!-- Case lookup panel — shown after authentication -->
+    <div id="officerCasePanel" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px">
       <div style="margin-bottom:18px">
         <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Case ID</label>
         <div style="display:flex;gap:10px">
@@ -445,6 +465,7 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       <div id="officerError" style="display:none;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red-dk);margin-top:8px"></div>
       <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">This tool retrieves the case record, client details, all notes, and any prior distributions from Zoho CRM and generates a full assessment using the same format as the online intake agent. The assessment is AI-assisted and must be verified by the assigned Zakat Officer.</p>
     </div>
+
     <div id="officerLoading" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;text-align:center">
       <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px"></div>
       <p id="officerLoadMsg" style="font-size:14px;color:var(--muted)">Connecting to Zoho CRM...</p>
@@ -754,7 +775,7 @@ window.onload = () => {
   checkRequirements(); // Show initial required fields on page load
   initChat();
 };
-function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); }
+function show(id) { document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); window.scrollTo(0,0); if (id==='s-officer') setTimeout(initOfficerMode, 50); }
 function goBack() { show('s-chat'); }
 
 // ---- API - with automatic retry on rate limit ----
@@ -770,6 +791,12 @@ async function claude(messages, system, maxTokens, attempt=0) {
 
 // ---- Init 
 async function initChat() {
+  // Handle Zoho OAuth callback if returning from login
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get('state') === 'officer_login' && urlParams.get('code')) {
+    handleOfficerCallback(urlParams.get('code'));
+    return;
+  }
   showTyping();
   const initMsg = { role:'user', content:'Please begin the intake conversation.' };
   try {
@@ -1426,13 +1453,27 @@ async function runCaseReview() {
   try {
     // Phase 1: Fetch all CRM data + download attachments (Netlify function, fast ~5s)
     setMsg('Connecting to Zoho CRM...');
+    const session = getOfficerSession();
+    if (!session) {
+      loadDiv.style.display = 'none';
+      if (btn) btn.disabled = false;
+      showOfficerLogin();
+      return;
+    }
     const crmRes = await fetch('/.netlify/functions/case-review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ case_id: caseId })
+      body: JSON.stringify({ case_id: caseId, session_token: session.token })
     });
     if (!crmRes.ok) throw new Error('CRM fetch failed: ' + crmRes.status);
     const crmData = await crmRes.json();
+    if (crmData.auth_required) {
+      loadDiv.style.display = 'none';
+      if (btn) btn.disabled = false;
+      sessionStorage.removeItem('nzf_officer_session');
+      showOfficerLogin();
+      return;
+    }
     if (crmData.error) { throw new Error(crmData.error); }
 
     const { case: caseRecord, contact, notes, distributions, attachments } = crmData;
@@ -1551,6 +1592,108 @@ CRITICAL: Return ONLY a raw valid JSON object. No markdown, no backticks. Start 
 {"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":null,"bank_alerts":[]},"contradictions":[],"advocacy":{"trigger_category":null,"trigger_detail":null,"what_client_tried":null,"human_impact":null,"support_network":null,"deficit_context":null,"asnaf_category":null,"asnaf_reasoning":null},"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null},"distributions":[]}
 
 Rules: contact from Contacts record. case_types from ["Financial hardship - food, bills, medical","Housing - rent, bond, arrears","Funeral debt","Education - courses, Quran school fees","Other"]. priority: "Priority 1 - CRITICAL RISK (24-hour turnaround)" / "Priority 2 - HIGH RISK (2-7 day turnaround)" / "Priority 3 - MODERATE RISK (2-week turnaround)" / "Priority 4 - LOW RISK (1-month turnaround)". financial: use document analysis as primary evidence. documents: populate from labelled analysis text. advocacy.asnaf_reasoning: 2-3 sentence eligibility argument. recommendation.recommendation_text: compelling advocacy paragraph ending "Eligibility to be confirmed by the assigned Zakat Officer." distributions from Purchase Orders. flags from ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT","CONTRADICTION DETECTED","EMERGENCY - PRIORITY 1"]. priority_level: "High" P1/P2, "Medium" P3, "Low" P4. zakat_category: "Al-Fuqara (The poor)" / "Al-Masakeen (The needy)" / "Al-Gharimeen (Those in debt)" / "Ibn Al-Sabil (Stranded traveller)".`;
+
+// ---- Zakat Officer Auth ----
+
+function initOfficerMode() {
+  // Check for OAuth callback code in URL first
+  const params = new URLSearchParams(window.location.search);
+  const code = params.get('code');
+  const state = params.get('state');
+  if (code && state === 'officer_login') {
+    // Clean the URL immediately
+    window.history.replaceState({}, '', window.location.pathname);
+    handleOfficerCallback(code);
+    return;
+  }
+  // Check for existing valid session
+  const session = getOfficerSession();
+  if (session) {
+    showOfficerAuthenticated(session.name, session.email);
+  } else {
+    showOfficerLogin();
+  }
+}
+
+function showOfficerLogin() {
+  document.getElementById('officerLoginPanel').style.display = 'block';
+  document.getElementById('officerLoginError').style.display = 'none';
+  document.getElementById('officerLoginLoading').style.display = 'none';
+  document.getElementById('officerCasePanel').style.display = 'none';
+  document.getElementById('officerUserBadge').style.display = 'none';
+}
+
+function showOfficerAuthenticated(name, email) {
+  document.getElementById('officerLoginPanel').style.display = 'none';
+  document.getElementById('officerCasePanel').style.display = 'block';
+  const badge = document.getElementById('officerUserBadge');
+  badge.style.display = 'flex';
+  document.getElementById('officerUserName').textContent = '\u2705 Signed in as ' + name + ' (' + email + ')';
+}
+
+function officerSignIn() {
+  const clientId = '1000.4P81GMOAZNJ0XFAJT8G7MSAZJS8I4Z';
+  const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
+  const scope = encodeURIComponent('ZohoCRM.users.READ');
+  const zohoAuthUrl = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&access_type=online&state=officer_login&prompt=select_account`;
+  window.location.href = zohoAuthUrl;
+}
+
+function officerSignOut() {
+  sessionStorage.removeItem('nzf_officer_session');
+  showOfficerLogin();
+}
+
+function getOfficerSession() {
+  try {
+    const raw = sessionStorage.getItem('nzf_officer_session');
+    if (!raw) return null;
+    const s = JSON.parse(raw);
+    if (Date.now() > s.expiry) { sessionStorage.removeItem('nzf_officer_session'); return null; }
+    return s;
+  } catch { return null; }
+}
+
+async function handleOfficerCallback(code) {
+  const loginPanel = document.getElementById('officerLoginPanel');
+  const loadingMsg = document.getElementById('officerLoginLoading');
+  const errDiv     = document.getElementById('officerLoginError');
+  if (loginPanel) loginPanel.style.display = 'block';
+  if (loadingMsg) { loadingMsg.style.display = 'block'; loadingMsg.textContent = 'Verifying your Zoho account...'; }
+  if (errDiv)     errDiv.style.display = 'none';
+  show('s-officer');
+
+  try {
+    const redirectUri = window.location.origin + window.location.pathname;
+    const res = await fetch('/.netlify/functions/officer-auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code, redirect_uri: redirectUri })
+    });
+    const data = await res.json();
+    if (loadingMsg) loadingMsg.style.display = 'none';
+
+    if (data.error || !data.success) {
+      if (errDiv) { errDiv.textContent = data.error || 'Login failed. Please try again.'; errDiv.style.display = 'block'; }
+      return;
+    }
+
+    // Store session in sessionStorage (clears when browser tab closes)
+    const session = {
+      name: data.user.name,
+      email: data.user.email,
+      role: data.user.role,
+      token: data.session_token,
+      expiry: Date.now() + (8 * 60 * 60 * 1000)
+    };
+    sessionStorage.setItem('nzf_officer_session', JSON.stringify(session));
+    showOfficerAuthenticated(data.user.name, data.user.email);
+
+  } catch (e) {
+    if (loadingMsg) loadingMsg.style.display = 'none';
+    if (errDiv) { errDiv.textContent = 'Connection error: ' + e.message; errDiv.style.display = 'block'; }
+  }
+}
 </script>
 </body>
 </html>
