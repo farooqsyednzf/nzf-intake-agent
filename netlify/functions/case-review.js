@@ -33,12 +33,12 @@ exports.handler = async (event) => {
   try {
     const decoded = Buffer.from(session_token, 'base64').toString();
     const parts = decoded.split('|');
-    if (parts.length < 4) throw new Error('Invalid token format');
+    if (parts.length < 3) throw new Error('Invalid token format');
     const sig = parts.pop();
     const payload = parts.join('|');
     const expectedSig = crypto.createHmac('sha256', clientSecret).update(payload).digest('hex');
     if (sig !== expectedSig) throw new Error('Invalid signature');
-    const expiry = parseInt(parts[2]);
+    const expiry = parseInt(parts[parts.length - 1]);
     if (Date.now() > expiry) throw new Error('Session expired — please sign in again');
   } catch (err) {
     return { statusCode: 401, body: JSON.stringify({ error: err.message, auth_required: true }) };
