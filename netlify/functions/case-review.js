@@ -71,8 +71,10 @@ exports.handler = async (event) => {
     const attachmentList = attachListRes.data || [];
 
     // Step 4: Download supported attachments in parallel (max 5, max 4MB each)
-    const SUPPORTED = { '.pdf':'application/pdf', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png' };
-    const MAX_SIZE  = 4 * 1024 * 1024;
+    // Prioritise: PDFs first (small, fast), then small images. Skip large images.
+    // Images > 1MB are slow for Claude vision — skip them and note to view in Zoho CRM.
+    const MAX_PDF_SIZE   = 4 * 1024 * 1024; // 4MB for PDFs
+    const MAX_IMAGE_SIZE = 1 * 1024 * 1024; // 1MB for images (prevents slow vision calls)
     const MAX_FILES = 5;
 
     // Prioritise: bank statements / PDFs first, then images
@@ -83,36 +85,25 @@ exports.handler = async (event) => {
       const bScore = bExt === '.pdf' ? 0 : 1;
       return aScore - bScore || parseInt(a.Size||0) - parseInt(b.Size||0);
     });
+    const SUPPORTED = { '.pdf':'application/pdf', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.png':'image/png' };
 
     const eligible = sortedList.filter(att => {
       const ext = (att.File_Name||'').toLowerCase().match(/\.[^.]+$/)?.[0];
-      return SUPPORTED[ext] && parseInt(att.Size||0) <= MAX_SIZE;
+      if (!SUPPORTED[ext]) return false;
+      const size = parseInt(att.Size||0);
+      return ext === '.pdf' ? size <= MAX_PDF_SIZE : size <= MAX_IMAGE_SIZE;
     }).slice(0, MAX_FILES);
 
     const skipped = attachmentList
       .filter(att => !eligible.includes(att))
       .map(att => {
         const ext = (att.File_Name||'').toLowerCase().match(/\.[^.]+$/)?.[0];
-        if (!SUPPORTED[ext]) return `${att.File_Name} (unsupported type — Word/Excel docs can be viewed in Zoho CRM directly)`;
-        if (parseInt(att.Size||0) > MAX_SIZE) return `${att.File_Name} (${(parseInt(att.Size)/1024/1024).toFixed(1)}MB — too large, view in Zoho CRM)`;
+        if (!SUPPORTED[ext]) return `${att.File_Name} (unsupported type — view in Zoho CRM)`;
+        const size = parseInt(att.Size||0);
+        const limit = ext === '.pdf' ? MAX_PDF_SIZE : MAX_IMAGE_SIZE;
+        if (size > limit) return `${att.File_Name} (${(size/1024/1024).toFixed(1)}MB — view in Zoho CRM directly)`;
         return `${att.File_Name} (limit reached)`;
       });
-
-    const downloadResults = await Promise.allSettled(
-      eligible.map(async (att) => {
-        const ext = att.File_Name.toLowerCase().match(/\.[^.]+$/)?.[0];
-        const res = await fetch(`${crmBaseUrl}/crm/v2/Potentials/${caseInternalId}/Attachments/${att.id}`, { headers: auth });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const buf = await res.arrayBuffer();
-        return {
-          file_name: att.File_Name,
-          media_type: SUPPORTED[ext],
-          base64: Buffer.from(buf).toString('base64'),
-          uploaded_by: att.Created_By?.name || 'Unknown',
-          size_kb: Math.round(parseInt(att.Size||0) / 1024),
-        };
-      })
-    );
 
     const downloaded = downloadResults.filter(r => r.status === 'fulfilled').map(r => r.value);
     const failedDL   = downloadResults.filter(r => r.status === 'rejected').map((r,i) => `${eligible[i]?.File_Name} (download failed)`);
