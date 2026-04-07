@@ -33,7 +33,7 @@ exports.handler = async (event) => {
   try {
     const decoded = Buffer.from(session_token, 'base64').toString();
     const parts = decoded.split('|');
-    if (parts.length < 3) throw new Error('Invalid token format');
+    if (parts.length < 3) throw new Error('Invalid token');
     const sig = parts.pop();
     const payload = parts.join('|');
     const expectedSig = crypto.createHmac('sha256', clientSecret).update(payload).digest('hex');
