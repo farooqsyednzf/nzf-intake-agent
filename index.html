@@ -1409,87 +1409,106 @@ function renderPreview(d, crmResults, opts) {
 
 // ---- Zakat Officer Case Review Mode ----
 async function runCaseReview() {
-  const input = document.getElementById('officerCaseId');
+  const input  = document.getElementById('officerCaseId');
   const errDiv = document.getElementById('officerError');
   const loadDiv = document.getElementById('officerLoading');
   const loadMsg = document.getElementById('officerLoadMsg');
-  const btn = document.getElementById('officerBtn');
+  const btn    = document.getElementById('officerBtn');
 
   const caseId = (input?.value || '').trim();
-  if (!caseId) {
-    errDiv.textContent = 'Please enter a CASE-ID.';
-    errDiv.style.display = 'block';
-    return;
-  }
+  if (!caseId) { errDiv.textContent = 'Please enter a CASE-ID.'; errDiv.style.display = 'block'; return; }
   errDiv.style.display = 'none';
   loadDiv.style.display = 'block';
   if (btn) btn.disabled = true;
 
-  const steps = [
-    'Connecting to Zoho CRM...',
-    'Fetching case record...',
-    'Loading client details...',
-    'Retrieving case notes...',
-    'Downloading attachments...',
-    'Analysing documents...',
-    'Running AI assessment...',
-    'Generating review...',
-  ];
-  let stepIdx = 0;
-  const stepTimer = setInterval(() => {
-    if (stepIdx < steps.length - 1) { stepIdx++; loadMsg.textContent = steps[stepIdx]; }
-  }, 1800);
+  const setMsg = (m) => { if (loadMsg) loadMsg.textContent = m; };
 
   try {
-    const res = await fetch('/.netlify/functions/case-review', {
+    // Phase 1: Fetch all CRM data + download attachments (Netlify function, fast ~5s)
+    setMsg('Connecting to Zoho CRM...');
+    const crmRes = await fetch('/.netlify/functions/case-review', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ case_id: caseId })
     });
-    const data = await res.json();
-    clearInterval(stepTimer);
+    if (!crmRes.ok) throw new Error('CRM fetch failed: ' + crmRes.status);
+    const crmData = await crmRes.json();
+    if (crmData.error) { throw new Error(crmData.error); }
+
+    const { case: caseRecord, contact, notes, distributions, attachments } = crmData;
+    const downloaded = attachments?.downloaded || [];
+    const skipped    = attachments?.skipped || [];
+
+    // Phase 2: Analyse each attachment via browser -> chat.js proxy (avoids gateway timeout)
+    const docAnalyses = [];
+    for (let i = 0; i < downloaded.length; i++) {
+      const att = downloaded[i];
+      setMsg(`Analysing document ${i+1} of ${downloaded.length}: ${att.file_name}...`);
+      try {
+        const contentBlock = att.media_type === 'application/pdf'
+          ? { type: 'document', source: { type: 'base64', media_type: 'application/pdf', data: att.base64 } }
+          : { type: 'image',    source: { type: 'base64', media_type: att.media_type,    data: att.base64 } };
+        const analysisText = await claude(
+          [{ role: 'user', content: [contentBlock, { type: 'text', text: 'Analyse this document for NZF case ' + caseId + '.' }] }],
+          SYS_DOC_OFFICER, 800
+        );
+        docAnalyses.push({ file_name: att.file_name, analysis: analysisText });
+      } catch(e) {
+        docAnalyses.push({ file_name: att.file_name, analysis: 'Analysis failed: ' + e.message });
+      }
+    }
+
+    // Phase 3: Final assessment — text only, fast (browser -> chat.js proxy)
+    setMsg('Generating assessment...');
+    const dossier = { case: caseRecord, contact, notes, distributions,
+      attachments: { analysed: docAnalyses, skipped, total_in_crm: attachments?.total_in_crm || 0 }
+    };
+    const rawJson = await claude(
+      [{ role: 'user', content: 'Review this NZF case and produce the assessment JSON.\n\n' + JSON.stringify(dossier, null, 2) }],
+      SYS_OFFICER_ASSESS, 6000
+    );
+    let assessment;
+    try {
+      assessment = JSON.parse(rawJson.replace(/^```(?:json)?\s*/i,'').replace(/\s*```\s*$/,'').trim());
+    } catch {
+      const m = rawJson.match(/\{[\s\S]*\}/);
+      if (m) assessment = JSON.parse(m[0]);
+      else throw new Error('Could not parse assessment response');
+    }
+
     loadDiv.style.display = 'none';
     if (btn) btn.disabled = false;
 
-    if (data.error) {
-      errDiv.textContent = data.error;
-      errDiv.style.display = 'block';
-      return;
-    }
-
-    // Show attachment summary if any were processed
-    if (data.attachments_analysed?.length > 0 || data.attachments_skipped?.length > 0) {
-      const analysed = data.attachments_analysed || [];
-      const skipped = data.attachments_skipped || [];
-      let msg = '';
-      if (analysed.length) msg += `Analysed: ${analysed.map(a => a.file_name).join(', ')}. `;
-      if (skipped.length) msg += `Skipped: ${skipped.join(', ')}.`;
-      const infoDiv = document.createElement('div');
-      infoDiv.style.cssText = 'background:var(--blue-lt);border:1px solid #bfdbfe;border-radius:8px;padding:9px 13px;font-size:12px;color:var(--blue);margin-top:10px';
-      infoDiv.textContent = '\uD83D\uDCCE ' + msg;
-      document.querySelector('#s-officer .sc') ? null : null; // placeholder
-      document.getElementById('officerCaseId').closest('div.sc, div') && infoDiv;
-      // Append after the input area
-      const inputContainer = document.getElementById('officerCaseId').closest('div');
-      if (inputContainer) inputContainer.appendChild(infoDiv);
-    }
-
-    // Render using the same preview function, with an officer mode flag
-    renderPreview(data.assessment, null, {
-      officerMode: true,
-      caseId: caseId,
-      rawCase: data.raw_case
-    });
+    renderPreview(assessment, null, { officerMode: true, caseId, rawCase: caseRecord,
+      attachmentsAnalysed: docAnalyses.map(a=>a.file_name),
+      attachmentsSkipped: skipped });
     show('s-preview');
 
   } catch (e) {
-    clearInterval(stepTimer);
     loadDiv.style.display = 'none';
     if (btn) btn.disabled = false;
-    errDiv.textContent = 'Connection error: ' + e.message;
+    errDiv.textContent = e.message || 'Connection error. Please try again.';
     errDiv.style.display = 'block';
   }
 }
+
+// SYS_DOC for officer mode document analysis
+const SYS_DOC_OFFICER = `You are a document analysis assistant for NZF Australia. Analyse this document and output using EXACT labels.
+
+For IDENTITY DOCUMENTS: DOCUMENT TYPE: [type] / ID NAME: [name] / ID DOB: [dob] / ID ADDRESS: [address or Not shown] / ID EXPIRY: [expiry] / ID VERIFIED: [Yes/No/Partial] / ID NOTES: [discrepancies or None]
+For BANK STATEMENTS: DOCUMENT TYPE: Bank Statement / BANK NAME: [name] / STATEMENT PERIOD: [period] / INCOME SUMMARY: [sources, amounts, frequency] / EXPENSE SUMMARY: [categories and monthly totals] / AVERAGE BALANCE: [plain English e.g. Consistently overdrawn average approx -$1200] / ALERTS: [gambling, unexplained withdrawals, income mismatch, or None identified]
+For BILLS/INVOICES: DOCUMENT TYPE: [type] / AMOUNT: [amount] / DATE: [date] / NOTES: [relevant details]
+For OTHER: DOCUMENT TYPE: [describe] / SUMMARY: [what it shows and relevance]
+Privacy: Never reproduce full account numbers, BSB, or TFNs.`;
+
+// SYS_OFFICER_ASSESS for final case assessment
+const SYS_OFFICER_ASSESS = `You are a case assessment assistant for NZF Australia. You have the full CRM dossier including case record, contact, notes, distributions, and labelled document analysis results. Read the document analyses carefully as primary financial evidence.
+
+CRITICAL: Return ONLY a raw valid JSON object. No markdown, no backticks. Start with { and end with }.
+
+{"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":null,"bank_alerts":[]},"contradictions":[],"advocacy":{"trigger_category":null,"trigger_detail":null,"what_client_tried":null,"human_impact":null,"support_network":null,"deficit_context":null,"asnaf_category":null,"asnaf_reasoning":null},"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null},"distributions":[]}
+
+Rules: contact from Contacts record. case_types from ["Financial hardship - food, bills, medical","Housing - rent, bond, arrears","Funeral debt","Education - courses, Quran school fees","Other"]. priority: "Priority 1 - CRITICAL RISK (24-hour turnaround)" / "Priority 2 - HIGH RISK (2-7 day turnaround)" / "Priority 3 - MODERATE RISK (2-week turnaround)" / "Priority 4 - LOW RISK (1-month turnaround)". financial: use document analysis as primary evidence. documents: populate from labelled analysis text. advocacy.asnaf_reasoning: 2-3 sentence eligibility argument. recommendation.recommendation_text: compelling advocacy paragraph ending "Eligibility to be confirmed by the assigned Zakat Officer." distributions from Purchase Orders. flags from ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT","CONTRADICTION DETECTED","EMERGENCY - PRIORITY 1"]. priority_level: "High" P1/P2, "Medium" P3, "Low" P4. zakat_category: "Al-Fuqara (The poor)" / "Al-Masakeen (The needy)" / "Al-Gharimeen (Those in debt)" / "Ibn Al-Sabil (Stranded traveller)".`;
 </script>
 </body>
 </html>
