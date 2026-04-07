@@ -416,7 +416,41 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       </div>
     </div>
   </div>
-  <footer class="ftr">National Zakat Foundation Australia &middot; ACNC registered &middot; <a href="tel:1300663729">1300 663 729</a> &middot; <a href="mailto:info@nzf.org.au">info@nzf.org.au</a></footer>
+  <footer class="ftr">National Zakat Foundation Australia &middot; ACNC registered &middot; <a href="tel:1300663729">1300 663 729</a> &middot; <a href="mailto:info@nzf.org.au">info@nzf.org.au</a> &nbsp;&middot;&nbsp; <a href="#" onclick="show('s-officer');return false;" style="color:var(--muted);font-size:10px;opacity:.6">&#128274; Zakat Officer Mode</a></footer>
+</div>
+
+<!-- SCREEN: ZAKAT OFFICER CASE REVIEW -->
+<div class="screen" id="s-officer">
+  <header class="hdr">
+    <div class="logo-row">
+      <img class="logo-img" src="data:image/png;base64,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" alt="NZF">
+      <div><div class="logo-org">National Zakat Foundation</div><div class="logo-ctry">Australia</div></div>
+    </div>
+    <span class="badge badge-amber">&#128274; Zakat Officer Mode</span>
+  </header>
+  <div style="background:#fff;border-bottom:1px solid var(--border);padding:2rem;text-align:center;flex-shrink:0">
+    <p style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--red);font-weight:600;margin-bottom:8px">Internal Use Only</p>
+    <h1 style="font-family:var(--ff-d);font-size:clamp(22px,4vw,34px);margin-bottom:10px;letter-spacing:-.3px">Case Assessment Tool</h1>
+    <p style="font-size:14px;color:var(--muted);max-width:480px;margin:0 auto;line-height:1.7">Enter a CASE-ID to pull the full case record from Zoho CRM and generate an AI-assisted assessment. For cases received by phone or manual form.</p>
+  </div>
+  <div style="flex:1;max-width:620px;margin:0 auto;width:100%;padding:2rem;display:flex;flex-direction:column;gap:16px">
+    <div style="background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px">
+      <div style="margin-bottom:18px">
+        <label style="display:block;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:8px">Case ID</label>
+        <div style="display:flex;gap:10px">
+          <input id="officerCaseId" type="text" placeholder="e.g. 201730266" style="flex:1;border:1px solid var(--border);border-radius:10px;padding:11px 14px;font-size:15px;font-family:var(--ff-b);color:var(--text);background:var(--cream);outline:none;transition:border-color .15s" onkeydown="if(event.key==='Enter')runCaseReview()" onfocus="this.style.borderColor='var(--red)'" onblur="this.style.borderColor='var(--border)'">
+          <button onclick="runCaseReview()" id="officerBtn" style="padding:11px 22px;background:var(--red);color:#fff;border:none;border-radius:10px;font-size:14px;font-weight:500;font-family:var(--ff-b);cursor:pointer;white-space:nowrap;transition:background .15s" onmouseover="this.style.background='var(--red-dk)'" onmouseout="this.style.background='var(--red)'">Review Case</button>
+        </div>
+      </div>
+      <div id="officerError" style="display:none;background:#fff5f5;border:1px solid #fecaca;border-radius:8px;padding:9px 12px;font-size:13px;color:var(--red-dk);margin-top:8px"></div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">This tool retrieves the case record, client details, all notes, and any prior distributions from Zoho CRM and generates a full assessment using the same format as the online intake agent. The assessment is AI-assisted and must be verified by the assigned Zakat Officer.</p>
+    </div>
+    <div id="officerLoading" style="display:none;background:#fff;border:1px solid var(--border);border-radius:14px;padding:28px;text-align:center">
+      <div style="width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;margin:0 auto 14px"></div>
+      <p id="officerLoadMsg" style="font-size:14px;color:var(--muted)">Connecting to Zoho CRM...</p>
+    </div>
+  </div>
+  <footer class="ftr"><a href="#" onclick="show('s-chat');return false;" style="color:var(--red)">&larr; Back to Intake Agent</a></footer>
 </div>
 
 <!-- SCREEN: CRM PREVIEW -->
@@ -1211,7 +1245,11 @@ function buildCRMPanel(crmResults, contact) {
 }
 
 // ---- Render Preview ----
-function renderPreview(d, crmResults) {
+function renderPreview(d, crmResults, opts) {
+  opts = opts || {};
+  const isOfficerMode = opts.officerMode || false;
+  const officerCaseId = opts.caseId || null;
+  const rawCase = opts.rawCase || null;
   const c=d.contact||{},cs=d.case||{},fi=d.financial||{},n=d.intake_note||{},r=d.recommendation||{},docs=d.documents||{},adv=d.advocacy||{};
   const F=(v,fb)=>(v!=null&&v!==''&&v!==false)?v:(fb||'<span class="f-val nil">Not captured</span>');
   const FM=v=>v!=null?'$'+Number(v).toLocaleString():'<span class="f-val nil">Not captured</span>';
@@ -1265,9 +1303,35 @@ function renderPreview(d, crmResults) {
     </div></div>`;
   })();
 
+  // Distributions panel (officer mode only)
+  const distHTML = isOfficerMode && Array.isArray(d.distributions) && d.distributions.length ? `
+  <div class="p-row full"><div class="panel"><div class="panel-hdr">
+    <div class="p-icon pi-g"><svg viewBox="0 0 24 24"><path d="M11.8 10.9c-2.27-.59-3-1.2-3-2.15 0-1.09 1.01-1.85 2.7-1.85 1.78 0 2.44.85 2.5 2.1h2.21c-.07-1.72-1.12-3.3-3.21-3.81V3h-3v2.16c-1.94.42-3.5 1.68-3.5 3.61 0 2.31 1.91 3.46 4.7 4.13 2.5.6 3 1.48 3 2.41 0 .69-.49 1.79-2.7 1.79-2.06 0-2.87-.92-2.98-2.1h-2.2c.12 2.19 1.76 3.42 3.68 3.83V21h3v-2.15c1.95-.37 3.5-1.5 3.5-3.55 0-2.84-2.43-3.81-4.7-4.4z"/></svg></div>
+    <span class="panel-title">Prior Distributions</span><span class="panel-mod">${d.distributions.length} payment${d.distributions.length!==1?'s':''} on record</span>
+  </div><div class="panel-body">
+    ${d.distributions.map(dist=>`<div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px">
+      <span class="tag tag-g" style="flex-shrink:0">${dist.distribution_id||'---'}</span>
+      <span style="flex:1;color:var(--text)">${dist.subject||'Distribution'}</span>
+      <span style="color:var(--text);font-weight:600">${dist.amount?'$'+Number(dist.amount).toLocaleString():'---'}</span>
+      <span class="tag tag-b">${dist.status||'---'}</span>
+      <span style="color:var(--muted);font-size:11px">${dist.date?new Date(dist.date).toLocaleDateString('en-AU'):''}</span>
+    </div>`).join('')}
+  </div></div></div>` : '';
+
+  const backBtn = isOfficerMode
+    ? `<button class="btn btn-ghost" onclick="show('s-officer')">&larr; Back to Case Lookup</button>`
+    : `<button class="btn btn-ghost" onclick="goBack()">&larr; Edit conversation</button>`;
+  const actionBtn = isOfficerMode
+    ? `<button class="btn btn-dis">Write Assessment to CRM (Phase 2)</button>`
+    : `<button class="btn btn-dis">Send to Zoho CRM (Phase 2)</button>`;
+  const actionNote = isOfficerMode
+    ? `Reviewing Case ${officerCaseId||''}${rawCase?.Deal_Name?' — '+rawCase.Deal_Name:''} &middot; AI assessment must be verified by assigned Zakat Officer`
+    : `Review all fields carefully. "Not captured" fields were not disclosed during intake. CRM write-back in Phase 2.`;
+
   document.getElementById('prevMain').innerHTML=`
-  <div class="act-bar"><p>Review all fields carefully. "Not captured" fields were not disclosed during intake. CRM write-back in Phase 2.</p><button class="btn btn-ghost" onclick="goBack()">&larr; Edit conversation</button><button class="btn btn-dis">Send to Zoho CRM (Phase 2)</button></div>
-  <div style="background:${priS.bg};border:1px solid ${priS.bc};border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px"><div style="font-size:28px">${priS.icon}</div><div><div style="font-size:15px;font-weight:700;color:${priS.col};margin-bottom:3px">${priS.label}</div><div style="font-size:12px;color:${priS.col};opacity:.8">NZF Case Urgency Guideline - Assigned by AI intake agent - Zakat Officer must confirm</div></div></div>
+  <div class="act-bar"><p>${actionNote}</p>${backBtn}${actionBtn}</div>
+  ${isOfficerMode ? '' : ''}
+  <div style="background:${priS.bg};border:1px solid ${priS.bc};border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:14px"><div style="font-size:28px">${priS.icon}</div><div><div style="font-size:15px;font-weight:700;color:${priS.col};margin-bottom:3px">${priS.label}</div><div style="font-size:12px;color:${priS.col};opacity:.8">${isOfficerMode ? 'NZF Case Urgency Guideline — AI assessment from CRM data — Zakat Officer must confirm' : 'NZF Case Urgency Guideline — Assigned by AI intake agent — Zakat Officer must confirm'}</div></div></div>
   <div class="p-row">
     <div class="panel"><div class="panel-hdr"><div class="p-icon pi-b"><svg viewBox="0 0 24 24"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg></div><span class="panel-title">Contact Record</span><span class="panel-mod">Contacts module</span></div><div class="panel-body"><div class="fgrid">
       <div class="f"><span class="f-lbl">First Name</span><span class="f-val">${F(c.first_name)}</span></div><div class="f"><span class="f-lbl">Last Name</span><span class="f-val">${F(c.last_name)}</span></div>
@@ -1303,7 +1367,7 @@ function renderPreview(d, crmResults) {
   </div>
   ${docHTML}
   ${buildContradictionsPanel(d.contradictions||[])}
-  ${buildCRMPanel(crmResults,d.contact)}
+   ${isOfficerMode ? distHTML : buildCRMPanel(crmResults,d.contact)}
   <div class="p-row full"><div class="panel" style="border-color:#e9d5ff"><div class="panel-hdr" style="background:#fdf4ff"><div class="p-icon" style="background:#f3e8ff"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#7c3aed"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><span class="panel-title">Advocacy Assessment</span><span class="panel-mod" style="background:#fdf4ff;border-color:#e9d5ff;color:#7c3aed">For Zakat Officer review</span></div>
     <div class="panel-body">
       <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px 13px;font-size:12px;color:#6b21a8;margin-bottom:16px">This section is generated from the intake conversation to help the Zakat Officer build and present the strongest honest case. All assessments must be verified and confirmed by the assigned Zakat Officer.</div>
@@ -1339,8 +1403,92 @@ function renderPreview(d, crmResults) {
     </div>
     <div class="ai-disclaimer">This AI assessment is a guide only. All eligibility determinations and funding decisions are made by qualified NZF Zakat Officers based on Zakat principles and the NZF assessment framework. No support is guaranteed or implied at any stage of the intake process.</div>
   </div></div></div>
-  ${transcriptHTML}
-  <div class="act-bar"><p>Phase 2 will connect this directly to Zoho CRM - creating the Contact, Case, and Intake Note automatically.</p><button class="btn btn-ghost" onclick="goBack()">&larr; Back to conversation</button><button class="btn btn-dis">Send to Zoho CRM (Phase 2)</button></div>`;
+   ${isOfficerMode ? '' : transcriptHTML}
+  <div class="act-bar"><p>${actionNote}</p>${backBtn}${actionBtn}</div>`;
+}
+
+// ---- Zakat Officer Case Review Mode ----
+async function runCaseReview() {
+  const input = document.getElementById('officerCaseId');
+  const errDiv = document.getElementById('officerError');
+  const loadDiv = document.getElementById('officerLoading');
+  const loadMsg = document.getElementById('officerLoadMsg');
+  const btn = document.getElementById('officerBtn');
+
+  const caseId = (input?.value || '').trim();
+  if (!caseId) {
+    errDiv.textContent = 'Please enter a CASE-ID.';
+    errDiv.style.display = 'block';
+    return;
+  }
+  errDiv.style.display = 'none';
+  loadDiv.style.display = 'block';
+  if (btn) btn.disabled = true;
+
+  const steps = [
+    'Connecting to Zoho CRM...',
+    'Fetching case record...',
+    'Loading client details...',
+    'Retrieving case notes...',
+    'Downloading attachments...',
+    'Analysing documents...',
+    'Running AI assessment...',
+    'Generating review...',
+  ];
+  let stepIdx = 0;
+  const stepTimer = setInterval(() => {
+    if (stepIdx < steps.length - 1) { stepIdx++; loadMsg.textContent = steps[stepIdx]; }
+  }, 1800);
+
+  try {
+    const res = await fetch('/.netlify/functions/case-review', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ case_id: caseId })
+    });
+    const data = await res.json();
+    clearInterval(stepTimer);
+    loadDiv.style.display = 'none';
+    if (btn) btn.disabled = false;
+
+    if (data.error) {
+      errDiv.textContent = data.error;
+      errDiv.style.display = 'block';
+      return;
+    }
+
+    // Show attachment summary if any were processed
+    if (data.attachments_analysed?.length > 0 || data.attachments_skipped?.length > 0) {
+      const analysed = data.attachments_analysed || [];
+      const skipped = data.attachments_skipped || [];
+      let msg = '';
+      if (analysed.length) msg += `Analysed: ${analysed.map(a => a.file_name).join(', ')}. `;
+      if (skipped.length) msg += `Skipped: ${skipped.join(', ')}.`;
+      const infoDiv = document.createElement('div');
+      infoDiv.style.cssText = 'background:var(--blue-lt);border:1px solid #bfdbfe;border-radius:8px;padding:9px 13px;font-size:12px;color:var(--blue);margin-top:10px';
+      infoDiv.textContent = '\uD83D\uDCCE ' + msg;
+      document.querySelector('#s-officer .sc') ? null : null; // placeholder
+      document.getElementById('officerCaseId').closest('div.sc, div') && infoDiv;
+      // Append after the input area
+      const inputContainer = document.getElementById('officerCaseId').closest('div');
+      if (inputContainer) inputContainer.appendChild(infoDiv);
+    }
+
+    // Render using the same preview function, with an officer mode flag
+    renderPreview(data.assessment, null, {
+      officerMode: true,
+      caseId: caseId,
+      rawCase: data.raw_case
+    });
+    show('s-preview');
+
+  } catch (e) {
+    clearInterval(stepTimer);
+    loadDiv.style.display = 'none';
+    if (btn) btn.disabled = false;
+    errDiv.textContent = 'Connection error: ' + e.message;
+    errDiv.style.display = 'block';
+  }
 }
 </script>
 </body>
