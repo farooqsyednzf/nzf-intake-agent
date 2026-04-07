@@ -295,6 +295,15 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
   .sub-area, .inp-area { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
   .ftr { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)); }
 }
+.doc-checklist{display:flex;flex-direction:column;gap:5px}
+.doc-item{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:var(--muted);line-height:1.45;padding:4px 0;border-bottom:1px solid var(--border);transition:color .2s}
+.doc-item:last-child{border-bottom:none}
+.doc-icon{font-size:13px;flex-shrink:0;margin-top:1px;opacity:.5;transition:opacity .2s}
+.doc-item.uploaded{color:var(--green)}
+.doc-item.uploaded .doc-icon{opacity:1}
+.doc-item.uploaded .doc-icon::before{content:"✓ ";font-size:11px;font-weight:700}
+.doc-eg{display:block;font-size:10px;color:var(--border);color:#c0b8b0;font-style:italic;margin-top:1px}
+.doc-item.uploaded .doc-eg{color:#a7f3d0}
 </style>
 </head>
 <body>
@@ -384,6 +393,18 @@ html,body{height:100%;font-family:var(--ff-b);color:var(--text);background:var(-
       <div class="sc">
         <div class="sc-hdr"><span class="sc-title">Information Captured</span></div>
         <div class="sc-body" id="infoPanel"><p class="i-empty">Will appear as we chat...</p></div>
+      </div>
+      <div class="sc">
+        <div class="sc-hdr"><span class="sc-title">Useful Documents</span></div>
+        <div class="sc-body" style="padding-top:10px;padding-bottom:10px">
+          <p style="font-size:11px;color:var(--muted);margin-bottom:9px;line-height:1.5">If you have any of these, attaching them helps our Zakat Officers assess your application faster. All optional.</p>
+          <div class="doc-checklist">
+            <div class="doc-item" id="dci-bank"><span class="doc-icon">&#128196;</span><span>Bank statements</span></div>
+            <div class="doc-item" id="dci-income"><span class="doc-icon">&#128196;</span><span>Proof of income <span class="doc-eg">payslip, Centrelink letter</span></span></div>
+            <div class="doc-item" id="dci-expenses"><span class="doc-icon">&#128196;</span><span>Proof of expenses <span class="doc-eg">rent ledger, utility bills</span></span></div>
+            <div class="doc-item" id="dci-support"><span class="doc-icon">&#128196;</span><span>Supporting letters <span class="doc-eg">medical, employer, housing</span></span></div>
+          </div>
+        </div>
       </div>
       <div class="doc-strip" id="docStrip">
         <span>&#128196;</span>
@@ -484,6 +505,7 @@ PERSONA AND TONE (all priorities):
 - Natural, conversational language. Never sound like a form or a checklist.
 - Respond warmly to Islamic greetings (wa alaykum assalam, barakAllahu feek).
 - 2 to 4 sentences max per message. One question at a time. Patient with broken English.
+- Think of yourself as an advocate, not an auditor. Your job is to understand the person deeply so their story can be presented compellingly to the Zakat Officers who will assess the case.
 
 LANGUAGE RULES (strictly follow these in every response):
 - Never use em dashes or long dashes (like this: --). Use short sentences instead.
@@ -498,25 +520,29 @@ Never promise, guarantee, or imply that financial support will be provided. Alwa
 
 STANDARD INTAKE STAGES (Priority 3 and 4 only):
 
-There are 7 pieces of information we must collect before submission. Gather them naturally through conversation, never as a form or list.
+There are pieces of information we must collect before submission. Gather them naturally through conversation, never as a form or list. The goal is to understand the full human story, not just tick boxes.
 
 1. INTRODUCTION - warm greeting in English and Arabic. Ask for their first and last name. Goal: capture full name.
 
-2. IMMEDIATE NEED - open-ended first ("tell me what's going on"), then clarify the category: housing, funeral, education, financial hardship, medical, or other. Goal: capture immediate need.
+2. THE STORY - This is the most important stage. Ask an open narrative question first: "Can you tell me what has happened - what has brought you to reach out to us today?" Then listen without interrupting. After they share, gently probe the TRIGGER - the specific event or moment that moved them from stability into hardship. Common triggers to listen for: job loss or reduced income, medical condition or disability, family breakdown or separation, recent arrival to Australia, caring responsibilities, sudden housing crisis, unexpected emergency (car breakdown, death, appliance failure). Ask: "Was there a specific moment or event when things changed?" and "Before that, were you managing okay?" Capturing the trigger is essential - it is the foundation of the case the Zakat Officer will build.
 
-3. CONTACT DETAILS - after understanding their need, say naturally: "So our Zakat Officers can reach you directly - could I get your mobile number?" Then: "And an email address?" Then: "And roughly where are you based - your suburb or postcode?" Goal: mobile, email, and address.
+3. CONTACT DETAILS - after understanding their situation, say naturally: "So our Zakat Officers can reach you directly - could I get your mobile number?" Then: "And an email address?" Then: "And roughly where are you based - your suburb or postcode?" Goal: mobile, email, and address.
 
 4. DATE OF BIRTH - weave in: "I also need a date of birth for our records - this helps the Zakat Officer verify your identity when they call." Goal: date of birth.
 
-5. FINANCIAL PICTURE - income source and monthly amount, monthly rent, key expenses (gently).
+5. HOUSEHOLD CONTEXT - before asking about money, understand who is affected. "Help me understand your household - who is living with you and depending on you right now?" Ask about number of people, ages of children, whether anyone else has income, any dependants with additional needs.
 
-6. HOUSEHOLD - who they live with, number and ages of children or dependants.
+6. FINANCIAL PICTURE - income sources and amounts, monthly rent, key essential expenses. Gently explore the deficit: does income fall short of essential expenses? If so, by how much? Context matters more than raw numbers - a $200 grocery bill for a family of six is very different from one for a single person.
 
-7. VULNERABILITIES - medical conditions, DV situation (extreme care), disability.
+7. HUMAN IMPACT - briefly and sensitively: "Beyond the financial side, how has this been affecting you and your family day to day?" This captures what numbers cannot show - stress, children's wellbeing, loss of dignity, isolation. Keep it brief - one or two exchanges only.
 
-8. DOCUMENTS - MANDATORY before wrap-up, for ALL Priority 3 and 4 cases. Always ask this, even if you think you have enough. Say something like: "Before I let you submit, can I just check - do you happen to have any documents you could attach? Even a photo of your ID and a recent bank statement would really help our Zakat Officers assess your application faster. Just tap the paperclip icon if you do. Completely optional, but it makes a big difference." Wait for their response before moving to wrap-up.
+8. WHAT THE CLIENT HAS TRIED - "I know reaching out isn't easy. What have you already tried before coming to us?" Document this: Centrelink, family support, community organisations, other charities. A client who has exhausted other options demonstrates genuine last-resort need.
 
-WRAP-UP - only after stage 8: "I think I have everything I need. The Submit button below should now be available - feel free to add anything else before you send it through."
+9. VULNERABILITIES - medical conditions, DV situation (extreme care and sensitivity, never press for details), disability, caring responsibilities.
+
+10. DOCUMENTS - MANDATORY before wrap-up. Say: "Before I let you submit, can I just check - do you happen to have any documents you could attach? Even a photo of your ID and a recent bank statement would really help our Zakat Officers assess your application faster. Just tap the paperclip icon if you do. Completely optional, but it makes a big difference." Wait for their response before wrapping up.
+
+WRAP-UP - only after stage 10: "I think I have everything I need. The Submit button below should now be available - feel free to add anything else before you send it through."
 
 RULES (all priorities):
 - DV: express deep care, assure confidentiality, never press for details
@@ -529,7 +555,7 @@ RULES (all priorities):
 DATA TRACKING — CRITICAL, FOLLOW EXACTLY:
 At the very end of EVERY response you send, after your conversational message, append this exact JSON block on a new line. Accumulate values — once captured, keep them in every subsequent response. Use null for anything not yet known. This block is parsed by the system and never shown to the applicant.
 
-{"_d":{"name":null,"dob":null,"mobile":null,"email":null,"address":null,"need":null,"situation":false,"income_source":null,"monthly_income":null,"monthly_rent":null,"children":null,"children_ages":null,"household_size":null,"marital_status":null,"medical":null,"dv":false,"amount":null,"returning":false,"accommodation":null,"residency":null,"interpreter":false,"interpreter_lang":null,"replies":[]}}
+{"_d":{"name":null,"dob":null,"mobile":null,"email":null,"address":null,"need":null,"situation":false,"income_source":null,"monthly_income":null,"monthly_rent":null,"other_expenses":null,"children":null,"children_ages":null,"household_size":null,"marital_status":null,"medical":null,"dv":false,"amount":null,"returning":false,"accommodation":null,"residency":null,"interpreter":false,"interpreter_lang":null,"trigger_category":null,"trigger_detail":null,"what_tried":null,"human_impact":null,"support_network":null,"replies":[]}}
 
 Rules for each field:
 - name: Full name as stated (e.g. "Sarah Syed"). Keep once captured.
@@ -554,11 +580,17 @@ Rules for each field:
 - residency: e.g. "Australian citizen", "Permanent resident", "Temporary visa", "Refugee". null until stated.
 - interpreter: true if applicant appears to need an interpreter or states they do.
 - interpreter_lang: Language needed (e.g. "Arabic", "Somali"). null unless stated.
+- other_expenses: Key essential expenses beyond rent (e.g. "$300/month utilities, $400/month food"). null until stated.
+- trigger_category: The root cause category. One of: "Job loss / reduced income", "Medical / disability", "Family breakdown", "Arrival / migration", "Caring responsibilities", "Housing crisis", "Unexpected emergency". null until clear from the story.
+- trigger_detail: 1-2 sentence plain English description of the specific trigger event (e.g. "Lost job when workplace closed in February. Had been working full-time for 3 years prior."). null until captured.
+- what_tried: What the client has already tried before reaching out (e.g. "Applied for Centrelink, asked family - no support available"). null until asked.
+- human_impact: Brief note on emotional/social impact beyond finances (e.g. "Severe stress, children's school attendance affected, socially isolated"). null until captured.
+- support_network: Whether family, friends or community can help (e.g. "No family in Australia, community unable to assist"). null until clear.
 - replies: Array of 2-4 short suggested reply options relevant to your LAST question or statement. These appear as tap buttons for the applicant. Make them natural, conversational, and directly relevant — not generic. Max 5 words each. Empty array if no obvious replies make sense (e.g. after a flowing narrative response). Examples: after asking about income → ["I'm on Centrelink", "I'm employed", "No income currently"]. After asking about children → ["Yes, I have children", "No children"]. After a DV disclosure → ["I am safe right now", "I am not safe"]. After asking for mobile → []. Never repeat the same replies twice in a row.
 
 Example of a valid response ending:
 ...and our team will do their very best to support you.
-{"_d":{"name":"Fatimah Al-Hassan","dob":"15 March 1988","mobile":"0412345678","email":"fatimah@email.com","address":"Auburn 2144","need":"Housing","situation":true,"income_source":"Centrelink","monthly_income":1632,"monthly_rent":1800,"children":2,"children_ages":"3, 7","household_size":3,"marital_status":"Single","medical":null,"dv":false,"amount":2000,"returning":false,"accommodation":"Renting","residency":"Permanent resident","interpreter":false,"interpreter_lang":null,"replies":["Yes, 4 children","No children","Just myself"]}}
+{"_d":{"name":"Fatimah Al-Hassan","dob":"15 March 1988","mobile":"0412345678","email":"fatimah@email.com","address":"Auburn 2144","need":"Housing","situation":true,"income_source":"Centrelink","monthly_income":1632,"monthly_rent":1800,"other_expenses":"$380/month food, $120/month utilities","children":2,"children_ages":"3, 7","household_size":3,"marital_status":"Single","medical":null,"dv":false,"amount":2000,"returning":false,"accommodation":"Renting","residency":"Permanent resident","interpreter":false,"interpreter_lang":null,"trigger_category":"Family breakdown","trigger_detail":"Husband left the family 4 months ago. Was previously two incomes. Now sole parent with no child support being paid.","what_tried":"Applied for Centrelink JobSeeker, asked family - no one able to help financially","human_impact":"Severe stress and anxiety, struggling to sleep. Children aware of financial pressure.","support_network":"No family in Australia. Community has provided some food but cannot assist financially.","replies":["Yes, I have documents","I don't have any","I'll try to get some"]}}
 
 Start every conversation with a warm greeting in English and Arabic, introduce yourself as Nour, and ask their name.`;
 
@@ -602,42 +634,68 @@ SUMMARY: [what it shows and its relevance to the Zakat application]
 Always use the exact label names above. Do not add preamble or explanation — output only the labelled fields.`;
 
 // ---- System: JSON Extraction 
-const SYS_EXTRACT = `You are a data extraction assistant for NZF Australia. Extract all information from the intake conversation into a structured JSON object.
+const SYS_EXTRACT = `You are a case advocacy assistant for NZF Australia (National Zakat Foundation). Extract all information from the intake conversation and generate a structured JSON object that will be used to create a CRM record and present the case to a Zakat Officer for assessment.
 
-Document analyses in the conversation history use labelled fields (INCOME SUMMARY:, EXPENSE SUMMARY:, AVERAGE BALANCE:, ALERTS:, ID VERIFIED:, etc). Read these labels directly and map them to the documents object fields — do not summarise or paraphrase, use the values as written.
+Your role is to build the strongest, most honest representation of the applicant's situation. Think like a barrister presenting a case: your job is to understand the full story deeply and present it compellingly. Numbers without context are misleading — always include the human story behind the numbers.
+
+Document analyses in the conversation history use labelled fields (INCOME SUMMARY:, EXPENSE SUMMARY:, AVERAGE BALANCE:, ALERTS:, ID VERIFIED:, etc). Read these labels directly and map them to the documents object — use the values as written.
 
 CRITICAL: Return ONLY a raw valid JSON object. No markdown, no backticks, no explanation. Start with { and end with }.
 
-{"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":null,"bank_alerts":[]},"contradictions":[],"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null}}
+{"contact":{"first_name":null,"last_name":null,"email":null,"mobile":null,"date_of_birth":null,"marital_status":null,"residency_status":null,"household_size":null,"number_of_children":null,"children_ages":null,"medical_condition":null,"domestic_violence":false,"interpreter_required":false,"interpreter_language":null,"accommodation_status":null,"weekly_rent":null},"case":{"case_name":null,"case_types":[],"description":null,"priority":null,"is_returning_client":false,"amount_requested":null,"urgency_reason":null},"financial":{"income_source":null,"monthly_income":null,"monthly_rent":null,"other_monthly_expenses":null,"monthly_deficit":null,"has_savings":null,"savings_notes":null},"documents":{"id_verified":false,"id_type":null,"id_name_match":null,"bank_statement_analysed":false,"bank_income_summary":null,"bank_expense_summary":null,"bank_average_balance":null,"bank_alerts":[]},"contradictions":[],"advocacy":{"trigger_category":null,"trigger_detail":null,"what_client_tried":null,"human_impact":null,"support_network":null,"deficit_context":null,"asnaf_category":null,"asnaf_reasoning":null},"intake_note":{"background":null,"immediate_need":null,"underlying_issue":null,"financial_summary":null,"vulnerability_factors":[],"documents_mentioned":[],"documents_outstanding":[]},"recommendation":{"priority_level":null,"zakat_category":null,"flags":[],"eligibility_notes":null,"recommendation_text":null,"suggested_amount":null,"next_steps":null}}
 
-Document field mapping (read directly from labelled analysis text in history):
-- id_type: from DOCUMENT TYPE label (when an identity document)
-- id_verified: true if ID VERIFIED label says "Yes", false otherwise
-- id_name_match: compare ID NAME label with name the applicant gave in conversation — note any mismatch
-- bank_statement_analysed: true if any DOCUMENT TYPE: Bank Statement appears in history
-- bank_income_summary: copy value from INCOME SUMMARY label exactly
-- bank_expense_summary: copy value from EXPENSE SUMMARY label exactly
-- bank_average_balance: copy value from AVERAGE BALANCE label exactly
-- bank_alerts: split ALERTS label value into array items (empty array if "None identified")
+FIELD RULES:
 
-Other rules:
+Contact fields:
+- first_name / last_name: split full name — first word is first_name, remainder is last_name
+- number_of_children: actual integer count, never "Yes"
+- children_ages: e.g. "2, 5, 8, 12"
+- weekly_rent: monthly_rent divided by 4.33 (rounded)
+
+Case fields:
 - case_types from: ["Financial hardship - food, bills, medical","Housing - rent, bond, arrears","Funeral debt","Education - courses, Quran school fees","Other"]
-- priority (EXACT NZF strings): "Priority 1 - CRITICAL RISK (24-hour turnaround)" or "Priority 2 - HIGH RISK (2-7 day turnaround)" or "Priority 3 - MODERATE RISK (2-week turnaround)" or "Priority 4 - LOW RISK (1-month turnaround)"
-- P1 triggers: urgent food now, rough sleeping tonight, emergency medication, funeral costs, immediate safety threat
-- P2 triggers: imminent eviction within days, utility disconnection, baby formula/heating/hygiene urgently needed
-- P3: no immediate impact in 14 days, bills temporarily manageable
-- P4: long-term debt, non-essential bills not urgent this month
-- zakat_category: "Al-Fuqara (The poor)" or "Al-Masakeen (The needy)" or "Al-Gharimeen (Those in debt)" or "Ibn Al-Sabil (Stranded traveller)"
-- flags from: ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT","CONTRADICTION DETECTED","EMERGENCY - PRIORITY 1"]
+- priority (EXACT NZF strings only): "Priority 1 - CRITICAL RISK (24-hour turnaround)" or "Priority 2 - HIGH RISK (2-7 day turnaround)" or "Priority 3 - MODERATE RISK (2-week turnaround)" or "Priority 4 - LOW RISK (1-month turnaround)"
+- description: Write in the applicant's own words / perspective. 2-3 sentences capturing their situation as they described it.
+
+Financial fields:
+- monthly_deficit: (monthly_income) minus (monthly_rent + other_monthly_expenses). Positive number if income falls short.
+- other_monthly_expenses: estimate from conversation (food, utilities, transport, medical, etc.)
+
+Document fields (read directly from labelled analysis):
+- id_type: from DOCUMENT TYPE label
+- id_verified: true if ID VERIFIED says "Yes"
+- id_name_match: compare ID NAME label vs applicant's stated name — note any discrepancy
+- bank_statement_analysed: true if DOCUMENT TYPE: Bank Statement appears
+- bank_income_summary: copy from INCOME SUMMARY label exactly
+- bank_expense_summary: copy from EXPENSE SUMMARY label exactly
+- bank_average_balance: copy from AVERAGE BALANCE label exactly (plain English string, never a raw number)
+- bank_alerts: split ALERTS label into array (empty array if "None identified")
+
+Advocacy fields (most important for the Zakat Officer):
+- trigger_category: Root cause. One of: "Job loss / reduced income", "Medical / disability", "Family breakdown", "Arrival / migration", "Caring responsibilities", "Housing crisis", "Unexpected emergency"
+- trigger_detail: 2-3 sentences describing the specific trigger event and when it happened. Include what life looked like before if mentioned. This is the foundation of the case.
+- what_client_tried: What the applicant has already tried before reaching out to NZF (Centrelink, family, other charities). Documents last-resort need.
+- human_impact: Emotional and social impact beyond finances — stress, children affected, isolation, loss of dignity. These are what the numbers do not show.
+- support_network: Whether family, friends, or community can assist. Lack of support network strengthens the case.
+- deficit_context: Write 1-2 sentences contextualising the financial gap. E.g. "A household of 5 with $1,240/month income and $1,860/month in essential expenses faces a $620/month shortfall — not through poor budgeting but through the loss of one income following [trigger]."
+- asnaf_category: The most applicable Zakat category. One of: "Al-Fuqara (The poor)" / "Al-Masakeen (The needy)" / "Al-Gharimeen (Those in debt)" / "Ibn Al-Sabil (Stranded traveller)"
+- asnaf_reasoning: 2-3 sentences connecting the client's actual situation to the chosen Asnaf category. This is the eligibility argument the Zakat Officer needs to approve the case. E.g. "I recommend this client be considered under Al-Masakeen. She is a single mother of three whose income of $1,240/month falls $620 short of essential household expenses following her husband's departure four months ago. She is not destitute but is genuinely unable to meet her family's basic needs without assistance."
+
+Intake note fields:
+- background: 2-4 sentences telling the story — trigger, timeline, household context
+- immediate_need: The specific thing they need help with right now
+- underlying_issue: The root cause behind the immediate need
+- financial_summary: Income $X/month from [source]. Rent $X/month. Other essentials $X/month. Deficit: $X/month.
+- vulnerability_factors: Array of strings — e.g. ["Single parent", "4 dependants", "Medical condition", "DV history", "No support network"]
+
+Recommendation fields:
 - priority_level: "High" for P1/P2, "Medium" for P3, "Low" for P4
-- first_name / last_name: split the applicant's full name — first word is first_name, remainder is last_name
-- number_of_children: extract the actual count (e.g. 3, 4) not just "Yes"
-- children_ages: list ages as mentioned (e.g. "2, 5, 8, 12")
-- case_name: "Zakat Application for [Full Name]"
-- bank_average_balance: plain English string, never a raw number
-- monthly_deficit: positive number if income less than expenses
-- recommendation_text: must never guarantee or promise support
-- contradictions: compare ID NAME / INCOME SUMMARY from documents against what applicant stated. Each item: {"field":"..","client_stated":"..","document_shows":"..","severity":"High/Medium/Low","caseworker_note":".."}. Empty array if no contradictions.`;
+- flags from: ["DV","URGENT","MEDICAL","CHILDREN","RETURNING CLIENT","DUPLICATE RISK","ELDERLY","REFUGEE/HUMANITARIAN","ID VERIFIED","BANK VERIFIED","INCOME DISCREPANCY","GAMBLING ALERT","CONTRADICTION DETECTED","EMERGENCY - PRIORITY 1"]
+- recommendation_text: A clear, compelling paragraph making the case for the Zakat Officer. Include: who the client is, what happened, the financial gap, what they have tried, and why Zakat support is appropriate. Never guarantee or promise support. End with "Eligibility to be confirmed by NZF Zakat Officer."
+- next_steps: What the Zakat Officer should do first (e.g. "Call client within 2-7 days. Verify bank statements. Confirm rent arrears amount with landlord if possible.")
+
+Contradictions:
+- Compare what applicant stated vs what documents show. Each item: {"field":"..","client_stated":"..","document_shows":"..","severity":"High/Medium/Low","caseworker_note":".."}. Empty array if none.`;
 
 // ---- State ----
 let history=[], userMsgCount=0, isLoading=false, capturedInfo={}, uploadedDocCount=0, isEmergency=false;
@@ -770,19 +828,32 @@ async function handleFileUpload(input) {
     removeTyping();
     uploadedDocCount++;
     capturedInfo['Docs'] = uploadedDocCount+' uploaded';
+    // Mark the relevant checklist item based on what was uploaded
+    const al = analysis.toLowerCase();
+    if (al.includes('bank statement')) tickDoc('dci-bank');
+    else if (al.includes('payslip')||al.includes('centrelink')||al.includes('income statement')) tickDoc('dci-income');
+    else if (al.includes('rent ledger')||al.includes('utility')||al.includes('lease')) tickDoc('dci-expenses');
+    else if (al.includes('medical')||al.includes('employer letter')||al.includes('housing letter')||al.includes('support letter')) tickDoc('dci-support');
+    else tickDoc('dci-bank'); // default to first unchecked
     // Store analysis in history (text only - no base64), never show to client
-    history.push({ role:'user', content:'I have uploaded a document: '+file.name }, { role:'assistant', content: analysis });
-    const confirms = [
-      'Thank you - your document has been received securely. Our Zakat Officer team will review it as part of your application.',
-      'Got it, thank you. Your document has been securely received and will be reviewed by our Zakat Officers.',
-      'Thank you for sharing that. Your document has come through safely and will form part of the Zakat Officer review.',
-    ];
-    addMsg('agent', confirms[uploadedDocCount % confirms.length]);
+    history.push(
+      { role:'user', content:'I have uploaded a document: '+file.name },
+      { role:'assistant', content: analysis }
+    );
     const strip=document.getElementById('docStrip');
     document.getElementById('docStripText').textContent = uploadedDocCount+' document'+(uploadedDocCount>1?'s':'')+' analysed in-session.';
     strip.classList.add('show');
-    document.getElementById('subArea').style.display='block';
     renderInfo();
+    // Now ask the agent to respond naturally — it knows the document was received
+    // and should either ask a follow-up question or invite submission
+    showTyping();
+    const followUpPrompt = 'The applicant has just uploaded a document (' + file.name + '). Acknowledge its receipt warmly in one sentence, then either ask the next logical question in the intake or — if you already have everything you need — let them know the Submit button is now ready. Keep it brief and natural.';
+    history.push({ role:'user', content: followUpPrompt });
+    const followUp = await claude(history, SYS_CHAT, 600);
+    removeTyping();
+    const cleanFollowUp = followUp.replace(/\n?\{"_d":\{[\s\S]*?\}\}/, '').trim();
+    history.push({ role:'assistant', content: cleanFollowUp });
+    addMsg('agent', followUp);
   } catch(e) {
     removeTyping();
     addMsg('agent', 'I\'m sorry, I had a little trouble receiving that document. Could you try uploading it again? Our Zakat Officers can also collect it during their follow-up.');
@@ -790,6 +861,14 @@ async function handleFileUpload(input) {
   isLoading=false; document.getElementById('sbtn').disabled=false;
 }
 function showErr(msg) { const b=document.getElementById('errBar'); b.textContent=msg; b.style.display='block'; setTimeout(()=>b.style.display='none',4000); }
+function tickDoc(id) {
+  // Mark a doc checklist item as uploaded, or the first un-ticked one if already done
+  const el = document.getElementById(id);
+  if (el && !el.classList.contains('uploaded')) { el.classList.add('uploaded'); return; }
+  // If already ticked, find first un-ticked
+  const all = ['dci-bank','dci-income','dci-expenses','dci-support'];
+  for (const i of all) { const e=document.getElementById(i); if(e&&!e.classList.contains('uploaded')){e.classList.add('uploaded');return;} }
+}
 
 // ---- Message UI 
 function addMsg(role, text) {
@@ -811,25 +890,27 @@ function addMsg(role, text) {
         if (d.need)      { MIN.need.ok = true; }
         if (d.situation) { MIN.situation.ok = true; }
         // Full sidebar — everything the model knows
-        if (d.name)           capturedInfo['Name']         = d.name;
-        if (d.dob)            capturedInfo['Date of birth'] = d.dob;
-        if (d.mobile)         capturedInfo['Mobile']        = d.mobile;
-        if (d.email)          capturedInfo['Email']         = d.email;
-        if (d.address)        capturedInfo['Address']       = d.address;
-        if (d.need)           capturedInfo['Needs']         = d.need;
-        if (d.income_source)  capturedInfo['Income']        = d.income_source;
+        if (d.name)           capturedInfo['Name']          = d.name;
+        if (d.dob)            capturedInfo['Date of birth']  = d.dob;
+        if (d.mobile)         capturedInfo['Mobile']         = d.mobile;
+        if (d.email)          capturedInfo['Email']          = d.email;
+        if (d.address)        capturedInfo['Address']        = d.address;
+        if (d.need)           capturedInfo['Needs']          = d.need;
+        if (d.income_source)  capturedInfo['Income']         = d.income_source;
         if (d.monthly_income) capturedInfo['Monthly income'] = '$' + d.monthly_income;
-        if (d.monthly_rent)   capturedInfo['Monthly rent']  = '$' + d.monthly_rent;
+        if (d.monthly_rent)   capturedInfo['Monthly rent']   = '$' + d.monthly_rent;
         if (d.children != null && d.children !== '') capturedInfo['Children'] = d.children + (d.children_ages ? ' (ages: ' + d.children_ages + ')' : '');
-        if (d.household_size) capturedInfo['Household']     = d.household_size + ' people';
+        if (d.household_size) capturedInfo['Household']      = d.household_size + ' people';
         if (d.marital_status) capturedInfo['Marital status'] = d.marital_status;
-        if (d.accommodation)  capturedInfo['Accommodation'] = d.accommodation;
-        if (d.residency)      capturedInfo['Residency']     = d.residency;
-        if (d.medical)        capturedInfo['Medical']       = d.medical;
-        if (d.dv)             capturedInfo['DV']            = '⚠ Flagged';
-        if (d.amount)         capturedInfo['Amount sought'] = '$' + d.amount;
-        if (d.returning)      capturedInfo['Returning']     = 'Yes';
-        if (d.interpreter)    capturedInfo['Interpreter']   = d.interpreter_lang || 'Yes';
+        if (d.accommodation)  capturedInfo['Accommodation']  = d.accommodation;
+        if (d.residency)      capturedInfo['Residency']      = d.residency;
+        if (d.medical)        capturedInfo['Medical']        = d.medical;
+        if (d.dv)             capturedInfo['DV']             = '\u26A0 Flagged';
+        if (d.amount)         capturedInfo['Amount sought']  = '$' + d.amount;
+        if (d.returning)      capturedInfo['Returning']      = 'Yes';
+        if (d.interpreter)    capturedInfo['Interpreter']    = d.interpreter_lang || 'Yes';
+        if (d.trigger_category) capturedInfo['Trigger']      = d.trigger_category;
+        if (d.what_tried)     capturedInfo['Has tried']      = d.what_tried.substring(0,40) + (d.what_tried.length>40?'…':'');
         renderInfo();
         checkRequirements();
         // Set contextual quick replies from the agent's own suggestion
@@ -1107,7 +1188,7 @@ function buildCRMPanel(crmResults, contact) {
 
 // ---- Render Preview ----
 function renderPreview(d, crmResults) {
-  const c=d.contact||{},cs=d.case||{},fi=d.financial||{},n=d.intake_note||{},r=d.recommendation||{},docs=d.documents||{};
+  const c=d.contact||{},cs=d.case||{},fi=d.financial||{},n=d.intake_note||{},r=d.recommendation||{},docs=d.documents||{},adv=d.advocacy||{};
   const F=(v,fb)=>(v!=null&&v!==''&&v!==false)?v:(fb||'<span class="f-val nil">Not captured</span>');
   const FM=v=>v!=null?'$'+Number(v).toLocaleString():'<span class="f-val nil">Not captured</span>';
   const FB=v=>v===true?'<span class="tag tag-r">Yes \u26A0</span>':v===false?'No':'<span class="f-val nil">Not captured</span>';
@@ -1199,6 +1280,28 @@ function renderPreview(d, crmResults) {
   ${docHTML}
   ${buildContradictionsPanel(d.contradictions||[])}
   ${buildCRMPanel(crmResults,d.contact)}
+  <div class="p-row full"><div class="panel" style="border-color:#e9d5ff"><div class="panel-hdr" style="background:#fdf4ff"><div class="p-icon" style="background:#f3e8ff"><svg viewBox="0 0 24 24" style="width:14px;height:14px;fill:#7c3aed"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg></div><span class="panel-title">Advocacy Assessment</span><span class="panel-mod" style="background:#fdf4ff;border-color:#e9d5ff;color:#7c3aed">For Zakat Officer review</span></div>
+    <div class="panel-body">
+      <div style="background:#fdf4ff;border:1px solid #e9d5ff;border-radius:8px;padding:10px 13px;font-size:12px;color:#6b21a8;margin-bottom:16px">This section is generated from the intake conversation to help the Zakat Officer build and present the strongest honest case. All assessments must be verified and confirmed by the assigned Zakat Officer.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div>
+          <div class="note-sec"><div class="note-lbl">Trigger Category</div><div class="note-txt" style="font-weight:500">${F(adv.trigger_category)}</div></div>
+          <div class="note-sec"><div class="note-lbl">What Happened</div><div class="note-txt">${F(adv.trigger_detail,'Not captured — ask during follow-up call')}</div></div>
+          <div class="note-sec"><div class="note-lbl">What the Client Has Already Tried</div><div class="note-txt">${F(adv.what_client_tried,'Not captured — important to document last-resort need')}</div></div>
+          <div class="note-sec"><div class="note-lbl">Support Network</div><div class="note-txt">${F(adv.support_network,'Not captured')}</div></div>
+        </div>
+        <div>
+          <div class="note-sec"><div class="note-lbl">Human Impact (beyond finances)</div><div class="note-txt">${F(adv.human_impact,'Not captured — ask during follow-up call')}</div></div>
+          <div class="note-sec"><div class="note-lbl">Financial Gap in Context</div><div class="note-txt">${F(adv.deficit_context,'Not assessed')}</div></div>
+          <div class="note-sec"><div class="note-lbl">Recommended Asnaf Category</div><div class="note-txt" style="font-weight:500">${F(adv.asnaf_category)}</div></div>
+        </div>
+      </div>
+      <div class="note-sec" style="margin-top:12px;padding-top:14px;border-top:1px solid var(--border)">
+        <div class="note-lbl">Asnaf Eligibility Argument</div>
+        <div style="font-size:14px;line-height:1.75;color:var(--text);background:#fdf4ff;padding:12px 14px;border-radius:8px;border:1px solid #e9d5ff;border-left:3px solid #7c3aed;margin-top:6px">${F(adv.asnaf_reasoning,'Not assessed — Zakat Officer to determine eligibility based on full assessment')}</div>
+      </div>
+    </div>
+  </div></div>
   <div class="p-row full"><div class="panel"><div class="panel-hdr"><div class="p-icon pi-g"><svg viewBox="0 0 24 24"><path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/></svg></div><span class="panel-title">Intake Note</span><span class="panel-mod">Notes on Case record</span></div><div class="panel-body">
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
       <div><div class="note-sec"><div class="note-lbl">Background</div><div class="note-txt">${F(n.background,'Not captured')}</div></div><div class="note-sec"><div class="note-lbl">Immediate Need</div><div class="note-txt">${F(n.immediate_need,'Not captured')}</div></div><div class="note-sec"><div class="note-lbl">Underlying Issue</div><div class="note-txt">${F(n.underlying_issue,'Not captured')}</div></div></div>
