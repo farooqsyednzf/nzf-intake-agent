@@ -821,8 +821,10 @@ async function initChat() {
   }
   // Handle Zoho OAuth callback if returning from login
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('state') === 'officer_login' && urlParams.get('code')) {
-    handleOfficerCallback(urlParams.get('code'));
+  const state = urlParams.get('state') || '';
+  if (state.startsWith('officer_login') && urlParams.get('code')) {
+    const pendingCaseId = state.includes('officer_login_') ? decodeURIComponent(state.replace('officer_login_', '')) : null;
+    handleOfficerCallback(urlParams.get('code'), pendingCaseId);
     return;
   }
   showTyping();
@@ -1496,7 +1498,7 @@ async function runCaseReview() {
     if (crmData.auth_required) {
       loadDiv.style.display = 'none';
       if (btn) btn.disabled = false;
-      sessionStorage.removeItem('nzf_officer_session');
+      localStorage.removeItem('nzf_officer_session');
       showOfficerLogin();
       return;
     }
@@ -1623,15 +1625,29 @@ Rules: contact from Contacts record. case_types from ["Financial hardship - food
 
 function initOfficerMode() {
   const params = new URLSearchParams(window.location.search);
-  const code = params.get('code');
+  const code   = params.get('code');
+  const caseId = params.get('case_id');
+
+  // Handle Zoho OAuth callback
   if (code && params.get('state') === 'officer_login') {
-    window.history.replaceState({}, '', window.location.pathname);
-    handleOfficerCallback(code);
+    window.history.replaceState({}, '', window.location.pathname + (caseId ? `?case_id=${caseId}` : ''));
+    handleOfficerCallback(code, caseId);
     return;
   }
+
+  // Pre-fill case ID if passed in URL
+  if (caseId) {
+    const input = document.getElementById('officerCaseId');
+    if (input) input.value = caseId;
+  }
+
   const session = getOfficerSession();
   if (session) {
     showOfficerAuthenticated(session.name, session.email);
+    // Auto-run review if case_id was in the URL
+    if (caseId) {
+      setTimeout(() => runCaseReview(), 300);
+    }
   } else {
     showOfficerLogin();
   }
@@ -1654,30 +1670,32 @@ function showOfficerAuthenticated(name, email) {
 }
 
 function officerSignIn() {
-  const clientId = '1000.6JXG1CQK4Y5TM9EX4N1MOJ4GNWN9IL';
+  const clientId   = '1000.6JXG1CQK4Y5TM9EX4N1MOJ4GNWN9IL';
+  const caseId     = new URLSearchParams(window.location.search).get('case_id') || '';
   const redirectUri = encodeURIComponent(window.location.origin + window.location.pathname);
-  const scope = encodeURIComponent('ZohoCRM.users.READ');
-  // Note: prompt=select_account removed — causes Zoho error
-  const zohoAuthUrl = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&access_type=online&state=officer_login`;
+  const scope      = encodeURIComponent('ZohoCRM.users.READ');
+  // Encode case_id into state so it survives the OAuth round-trip
+  const state      = caseId ? `officer_login_${encodeURIComponent(caseId)}` : 'officer_login';
+  const zohoAuthUrl = `https://accounts.zoho.com/oauth/v2/auth?response_type=code&client_id=${clientId}&scope=${scope}&redirect_uri=${redirectUri}&access_type=online&state=${state}`;
   window.location.href = zohoAuthUrl;
 }
 
 function officerSignOut() {
-  sessionStorage.removeItem('nzf_officer_session');
+  localStorage.removeItem('nzf_officer_session');
   showOfficerLogin();
 }
 
 function getOfficerSession() {
   try {
-    const raw = sessionStorage.getItem('nzf_officer_session');
+    const raw = localStorage.getItem('nzf_officer_session');
     if (!raw) return null;
     const s = JSON.parse(raw);
-    if (Date.now() > s.expiry) { sessionStorage.removeItem('nzf_officer_session'); return null; }
+    if (Date.now() > s.expiry) { localStorage.removeItem('nzf_officer_session'); return null; }
     return s;
   } catch { return null; }
 }
 
-async function handleOfficerCallback(code) {
+async function handleOfficerCallback(code, pendingCaseId) {
   const loginPanel = document.getElementById('officerLoginPanel');
   const loadingMsg = document.getElementById('officerLoginLoading');
   const errDiv     = document.getElementById('officerLoginError');
@@ -1701,7 +1719,7 @@ async function handleOfficerCallback(code) {
       return;
     }
 
-    // Store session in sessionStorage (clears when browser tab closes)
+    // Store session in localStorage so it persists across tabs opened from Zoho CRM
     const session = {
       name: data.user.name,
       email: data.user.email,
@@ -1709,8 +1727,14 @@ async function handleOfficerCallback(code) {
       token: data.session_token,
       expiry: Date.now() + (8 * 60 * 60 * 1000)
     };
-    sessionStorage.setItem('nzf_officer_session', JSON.stringify(session));
+    localStorage.setItem('nzf_officer_session', JSON.stringify(session));
     showOfficerAuthenticated(data.user.name, data.user.email);
+    // If a case_id was pending (came from Zoho CRM button), auto-run the review
+    if (pendingCaseId) {
+      const input = document.getElementById('officerCaseId');
+      if (input) input.value = pendingCaseId;
+      setTimeout(() => runCaseReview(), 300);
+    }
 
   } catch (e) {
     if (loadingMsg) loadingMsg.style.display = 'none';
