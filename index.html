@@ -804,13 +804,44 @@ function goBack() { show('s-chat'); }
 
 // ---- API - with automatic retry on rate limit ----
 async function claude(messages, system, maxTokens, attempt=0) {
-  const r = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model:MODEL, max_tokens:maxTokens, system, messages }) });
-  if (r.status === 429 && attempt < 4) {
-    await new Promise(res => setTimeout(res, (attempt + 1) * 8000));
+  const MAX_ATTEMPTS = 3;
+  // Backoff: 1.5s → 4s → 10s. Total worst case ~15.5s of waits.
+  const BACKOFF_MS = [1500, 4000, 10000];
+  let r;
+  try {
+    r = await fetch(PROXY, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ model:MODEL, max_tokens:maxTokens, system, messages }) });
+  } catch (netErr) {
+    // Network failure — retry
+    if (attempt < MAX_ATTEMPTS) {
+      await new Promise(res => setTimeout(res, BACKOFF_MS[attempt]));
+      return claude(messages, system, maxTokens, attempt + 1);
+    }
+    throw new Error('Connection error. Please check your internet and try again.');
+  }
+  if (r.ok) return (await r.json()).content[0].text;
+  // Parse error response
+  const errData = await r.json().catch(() => ({}));
+  const err = errData.error || {};
+  // Retry on rate limit (429), overload (529), gateway timeout (504), bad gateway (502)
+  const retryable = err.retryable === true || [429, 502, 504, 529].includes(r.status);
+  if (retryable && attempt < MAX_ATTEMPTS) {
+    // Honour server-provided retry_after if available (in seconds), otherwise use backoff schedule
+    const wait = err.retry_after ? Math.min(err.retry_after * 1000, 15000) : BACKOFF_MS[attempt];
+    console.log(`[claude] ${r.status} on attempt ${attempt + 1}, retrying in ${wait}ms`);
+    await new Promise(res => setTimeout(res, wait));
     return claude(messages, system, maxTokens, attempt + 1);
   }
-  if (!r.ok) { const e=await r.json().catch(()=>({})); throw new Error(e.error?.message||'Server error '+r.status); }
-  return (await r.json()).content[0].text;
+  // Final failure — throw with a useful message
+  if (r.status === 504 || r.status === 502) {
+    throw new Error('The request took too long to process. The case may have a large number of attachments. Please try again, or break the assessment into smaller pieces.');
+  }
+  if (r.status === 429) {
+    throw new Error('System is busy due to high demand. Please wait 30 seconds and try again.');
+  }
+  if (r.status === 529) {
+    throw new Error('Anthropic services are temporarily overloaded. Please try again in a moment.');
+  }
+  throw new Error(err.message || 'Server error ' + r.status);
 }
 
 // ---- Init 
